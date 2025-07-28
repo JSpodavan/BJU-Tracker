@@ -41,10 +41,6 @@ userRouter.post(
 userRouter.get(
     '/user/auth',
     (req, res, next) => {
-        console.log(
-            'Ищем токен при загрузке страницы :',
-            req.cookies.auth_token
-        );
         const token = req.cookies.auth_token;
         if (!token) {
             return res.status(401).json({ error: 'Требуется авторизация' });

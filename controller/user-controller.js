@@ -17,11 +17,11 @@ class UserController {
         }
         const hashPassword = await bcrypt.hash(password, 7);
         const newPerson = await pool.query(
-            'INSERT INTO users(name, email, password) VALUES ($1, $2, $3) RETURNING *',
+            'INSERT INTO users(name, email, password) VALUES ($1, $2, $3) RETURNING id',
             [name, email, hashPassword]
         );
         const token = jwt.sign(
-            { name: name, email: email },
+            { name: name, email: email, id: newPerson.rows[0] },
             process.env.JWT_SECRET
         );
         res.cookie('auth_token', token, {
@@ -48,7 +48,7 @@ class UserController {
         const isMatch = await bcrypt.compare(password, user.password);
         if (isMatch) {
             const token = jwt.sign(
-                { name: user.name, email: user.email },
+                { name: user.name, email: user.email, id: user.id },
                 process.env.JWT_SECRET
             );
             console.log('Токен :', token);
@@ -58,7 +58,11 @@ class UserController {
                 sameSite: 'Lax',
                 maxAge: 30 * 24 * 60 * 60 * 1000,
             });
-            res.status(200).json({ name: user.name, email: user.email });
+            res.status(200).json({
+                name: user.name,
+                email: user.email,
+                id: user.id,
+            });
         } else {
             res.status(401).json({
                 status: 'Ошибка',

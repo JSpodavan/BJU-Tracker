@@ -18,6 +18,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const profileUsername = document.getElementById('profileUsername');
     const profileEmail = document.getElementById('profileEmail');
     const logoutBtn = document.getElementById('logoutBtn');
+    const productsBtn = document.getElementById('productsBtn');
+    const productsPage = document.getElementById('productsPage');
+    const searchBtn = document.getElementById('searchBtn');
+    const productSearchSpace = document.getElementById('productSearch');
 
     async function checkAuth() {
         const response = await fetch(`${URL}/user/auth`, {
@@ -128,6 +132,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (response.ok) {
             registerFormContainer.style.display = 'block';
             profilePage.style.display = 'none';
+        }
+    });
+    productsBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        profilePage.style.display = 'none';
+        productsPage.style.display = 'block';
+    });
+    searchBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const product = { product: productSearchSpace.value };
+        try {
+            const response = await fetch(`${URL}/api/search`, {
+                method: 'POST',
+                body: JSON.stringify(product),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            const data = await response.json();
+        } catch (error) {
+            console.error(error);
         }
     });
 });
