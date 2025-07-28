@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const username = document.getElementById('username');
     const email = document.getElementById('email');
     const password = document.getElementById('password');
@@ -8,12 +8,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerFormContainer = document.getElementById(
         'registerFormContainer'
     );
+    const profilePage = document.getElementById('profilePage');
     const loginBtn = document.getElementById('loginBtn');
     const loginEmail = document.getElementById('loginEmail');
     const loginPassword = document.getElementById('loginPassword');
     const URL = 'http://localhost:5000';
     const registerBtn = document.getElementById('registerBtn');
     const loginFormContainer = document.getElementById('loginFormContainer');
+    const profileUsername = document.getElementById('profileUsername');
+    const profileEmail = document.getElementById('profileEmail');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    async function checkAuth() {
+        const response = await fetch(`${URL}/user/auth`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        if (response.ok) {
+            const data = await response.json();
+            registerFormContainer.style.display = 'none';
+            profilePage.style.display = 'block';
+            profileUsername.textContent = data.user.name;
+            profileEmail.textContent = data.user.email;
+        }
+    }
+    await checkAuth();
     showLoginBtn.addEventListener('click', () => {
         registerFormContainer.style.display = 'none';
         loginFormContainer.style.display = 'block';
@@ -34,14 +56,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch(`${URL}/user`, {
                     method: 'POST',
                     body: JSON.stringify(person),
+                    credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                 });
+                const data = await response.json();
                 if (response.ok) {
-                    alert('Регистрация успешна');
+                    alert('Вы успешно зарегистрировались');
+                    registerFormContainer.style.display = 'none';
+                    profilePage.style.display = 'block';
                 } else {
-                    alert('Регистрация не удачна!');
+                    if (data.errors) {
+                        alert(data.errors.map((err) => err.msg).join('\n'));
+                    } else if (data.message) {
+                        alert(data.message);
+                    } else {
+                        alert('Произошла неизвестная ошибка');
+                    }
                 }
             } catch (error) {
                 console.error('Ошибка', error);
@@ -60,12 +92,42 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(`${URL}/user/login`, {
                 method: 'POST',
                 body: JSON.stringify(user),
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
+            const data = await response.json();
+
+            if (response.ok) {
+                alert('Вы успешно вошли');
+                registerFormContainer.style.display = 'none';
+                loginFormContainer.style.display = 'none';
+                profilePage.style.display = 'block';
+                profileUsername.textContent = data.name;
+                profileEmail.textContent = data.email;
+            } else {
+                if (data.errors) {
+                    alert(data.errors.map((err) => err.msg).join('\n'));
+                } else if (data.message) {
+                    alert(data.message);
+                } else {
+                    alert('Произошла неизвестная ошибка');
+                }
+            }
         } catch (error) {
             console.error('Ошибка', error);
+        }
+    });
+    logoutBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const response = await fetch(`${URL}/user/logout`, {
+            method: 'POST',
+            credentials: 'include',
+        });
+        if (response.ok) {
+            registerFormContainer.style.display = 'block';
+            profilePage.style.display = 'none';
         }
     });
 });

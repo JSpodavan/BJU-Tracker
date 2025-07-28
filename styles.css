@@ -11,6 +11,12 @@ body {
     min-height: 100vh;
 }
 
+.container {
+    width: 100%;
+    max-width: 800px;
+}
+
+/* Стили для страницы авторизации */
 .welcome-container {
     width: 100%;
     max-width: 500px;
@@ -107,4 +113,86 @@ body {
 .switch-form a:hover {
     color: #2980b9;
     text-decoration: underline;
+}
+
+/* Стили для страницы профиля */
+.profile-page {
+    display: none;
+}
+
+.profile-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    width: 100%;
+    max-width: 600px;
+}
+
+.profile-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.profile-header h1 {
+    color: #2c3e50;
+    font-size: 2em;
+    margin-bottom: 5px;
+}
+
+.profile-email {
+    color: #7f8c8d;
+    font-size: 1.1em;
+    margin-bottom: 15px;
+}
+
+.profile-bio {
+    color: #34495e;
+    font-style: italic;
+    margin-bottom: 20px;
+}
+
+.profile-section {
+    margin-bottom: 30px;
+}
+
+.profile-section h2 {
+    color: #2c3e50;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.info-item {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.info-label {
+    font-weight: bold;
+    width: 150px;
+    color: #34495e;
+}
+
+.info-value {
+    flex: 1;
+}
+
+.logout-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    text-align: center;
+    margin-top: 30px;
+}
+
+.logout-btn:hover {
+    background-color: #c0392b;
 }

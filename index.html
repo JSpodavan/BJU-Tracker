@@ -3,102 +3,162 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Добро пожаловать</title>
+        <title>Профиль пользователя</title>
         <link rel="stylesheet" href="styles.css" />
-        <script src="index.js"></script>
     </head>
     <body>
-        <div class="welcome-container">
-            <header class="welcome-header">
-                <h1>Добро пожаловать!</h1>
-                <p>Присоединяйтесь к нашему сообществу</p>
-            </header>
+        <!-- Страница авторизации -->
+        <div class="container" id="authPage">
+            <div class="welcome-container">
+                <header class="welcome-header">
+                    <h1>Добро пожаловать!</h1>
+                    <p>Присоединяйтесь к нашему сообществу</p>
+                </header>
 
-            <!-- Форма регистрации (изначально видима) -->
-            <div class="form-container" id="registerFormContainer">
-                <h2>Регистрация</h2>
-                <form id="registerForm">
-                    <div class="form-group">
-                        <input
-                            type="text"
-                            id="username"
-                            placeholder="Имя пользователя"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <input
-                            type="email"
-                            id="email"
-                            placeholder="Электронная почта"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <input
-                            type="password"
-                            id="password"
-                            placeholder="Пароль"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <input
-                            type="password"
-                            id="confirmPassword"
-                            placeholder="Подтвердите пароль"
-                            required
-                        />
-                    </div>
-                    <button type="submit" class="submit-btn" id="registerBtn">
-                        Зарегистрироваться
-                    </button>
-                </form>
+                <!-- Форма регистрации -->
+                <div class="form-container" id="registerFormContainer">
+                    <h2>Регистрация</h2>
+                    <form id="registerForm">
+                        <div class="form-group">
+                            <input
+                                type="text"
+                                id="username"
+                                placeholder="Имя пользователя"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <input
+                                type="email"
+                                id="email"
+                                placeholder="Электронная почта"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <input
+                                type="password"
+                                id="password"
+                                placeholder="Пароль"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <input
+                                type="password"
+                                id="confirmPassword"
+                                placeholder="Подтвердите пароль"
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            class="submit-btn"
+                            id="registerBtn"
+                        >
+                            Зарегистрироваться
+                        </button>
+                    </form>
 
-                <div class="switch-form">
-                    <p>
-                        Уже зарегистрированы?
-                        <a href="#" id="showLoginBtn">Войти</a>
-                    </p>
+                    <div class="switch-form">
+                        <p>
+                            Уже зарегистрированы?
+                            <a href="#" id="showLoginBtn">Войти</a>
+                        </p>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Форма входа (изначально скрыта) -->
-            <div
-                class="form-container"
-                id="loginFormContainer"
-                style="display: none"
-            >
-                <h2>Вход</h2>
-                <form id="loginForm">
-                    <div class="form-group">
-                        <input
-                            type="email"
-                            id="loginEmail"
-                            placeholder="Электронная почта"
-                            required
-                        />
-                    </div>
-                    <div class="form-group">
-                        <input
-                            type="password"
-                            id="loginPassword"
-                            placeholder="Пароль"
-                            required
-                        />
-                    </div>
-                    <button type="submit" class="submit-btn" id="loginBtn">
-                        Войти
-                    </button>
-                </form>
+                <!-- Форма входа -->
+                <div
+                    class="form-container"
+                    id="loginFormContainer"
+                    style="display: none"
+                >
+                    <h2>Вход</h2>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <input
+                                type="email"
+                                id="loginEmail"
+                                placeholder="Электронная почта"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <input
+                                type="password"
+                                id="loginPassword"
+                                placeholder="Пароль"
+                                required
+                            />
+                        </div>
+                        <button type="submit" class="submit-btn" id="loginBtn">
+                            Войти
+                        </button>
+                    </form>
 
-                <div class="switch-form">
-                    <p>
-                        Ещё не зарегистрированы?
-                        <a href="#" id="showRegisterBtn">Создать аккаунт</a>
-                    </p>
+                    <div class="switch-form">
+                        <p>
+                            Ещё не зарегистрированы?
+                            <a href="#" id="showRegisterBtn">Создать аккаунт</a>
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Страница профиля -->
+        <div class="container profile-page" id="profilePage">
+            <div class="profile-container">
+                <header class="profile-header">
+                    <h1 id="profileUsername"></h1>
+
+                    <p class="profile-bio" id="profileBio">
+                        Frontend разработчик, любитель путешествий и фотографии
+                    </p>
+                </header>
+
+                <main class="profile-content">
+                    <section class="profile-section">
+                        <h2>Личная информация</h2>
+                        <div class="profile-info">
+                            <div class="info-item">
+                                <span class="info-label">email:</span>
+                                <span class="info-value" id="profileEmail"
+                                    >15 мая 1990</span
+                                >
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Город:</span>
+                                <span class="info-value" id="profileCity"
+                                    >Москва</span
+                                >
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Телефон:</span>
+                                <span class="info-value" id="profilePhone"
+                                    >+7 (123) 456-78-90</span
+                                >
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="profile-section">
+                        <h2>О себе</h2>
+                        <p id="profileAbout">
+                            Я веб-разработчик с 5-летним опытом работы.
+                            Специализируюсь на создании пользовательских
+                            интерфейсов. Люблю чистый код и продуманную
+                            архитектуру приложений. В свободное время
+                            путешествую и фотографирую.
+                        </p>
+                    </section>
+                    <a href="#" class="logout-btn" id="logoutBtn"
+                        >Выйти из профиля</a
+                    >
+                </main>
+            </div>
+        </div>
+        <script src="index.js"></script>
     </body>
 </html>
