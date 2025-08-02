@@ -4,7 +4,6 @@ const Router = express.Router;
 const userRouter = new Router();
 import { check, validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
-
 userRouter.post(
     '/user',
     [
@@ -13,6 +12,7 @@ userRouter.post(
             min: 4,
         }),
         check('email', 'Вы должны заполнить поле email').notEmpty(),
+        check('email', 'Неверный формат email').isEmail(),
     ],
     (req, res, next) => {
         const errors = validationResult(req);
@@ -57,5 +57,7 @@ userRouter.get(
     userController.getProfile
 );
 userRouter.post('/user/logout', userController.deleteToken);
+userRouter.post('/user/send-reset-email', userController.sendEmail);
+userRouter.post('/user/switch-password', userController.switchPassword);
 
 export default userRouter;

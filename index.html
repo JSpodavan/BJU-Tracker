@@ -5,8 +5,50 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Профиль пользователя</title>
         <link rel="stylesheet" href="styles.css" />
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        />
     </head>
     <body>
+        <div class="view-switcher" id="switchBtnSpace">
+            <button class="view-btn grid-btn active" title="Плитка">
+                <i class="fas fa-th-large"></i>
+                <span>Плитка</span>
+            </button>
+            <button class="view-btn list-btn" title="Список">
+                <i class="fas fa-list-ul"></i>
+                <span>Список</span>
+            </button>
+        </div>
+        <div class="popup-overlay" id="popup-space">
+            <div class="popup-container">
+                <button class="popup-close" title="Закрыть" id="popup-closeBtn">
+                    ×
+                </button>
+                <h3 class="popup-title" id="popup_title"></h3>
+                <div class="popup-content" id="popup-text">
+                    <!-- Тут будет появляться pop-up сообщение -->
+                </div>
+            </div>
+        </div>
+        <nav class="main-navbar" id="mainNavbar" style="display: none">
+            <div class="navbar-content">
+                <div class="navbar-logo">Сайт для качков</div>
+                <div class="navbar-links">
+                    <button id="navProfile" class="navbar-link active">
+                        Профиль
+                    </button>
+                    <button id="navProducts" class="navbar-link">
+                        Продукты
+                    </button>
+                    <button id="navFavorites" class="navbar-link">
+                        Избранное
+                    </button>
+                    <button id="navLogout" class="navbar-link">Выйти</button>
+                </div>
+            </div>
+        </nav>
         <!-- Страница авторизации -->
         <div class="container" id="authPage">
             <div class="welcome-container">
@@ -111,16 +153,27 @@
         <div class="container profile-page" id="profilePage">
             <div class="profile-container">
                 <header class="profile-header">
-                    <h1 id="profileUsername"></h1>
-                    <button class="products-btn" id="productsBtn">
-                        Продукты
-                    </button>
-
-                    <p class="profile-bio" id="profileBio">
-                        Frontend разработчик, любитель путешествий и фотографии
-                    </p>
+                    <div class="profile-avatar-section">
+                        <img
+                            src="https://api.dicebear.com/7.x/avataaars/svg?seed=anonymous"
+                            class="profile-avatar"
+                            id="profileAvatar"
+                        />
+                        <div class="profile-basic-info">
+                            <h1 id="profileUsername"></h1>
+                            <span class="profile-role">Пользователь</span>
+                        </div>
+                    </div>
+                    <div class="profile-meta">
+                        <span id="profileRegDate" class="profile-meta-item"
+                            >Зарегистрирован: 2024</span
+                        >
+                        <span id="profileStats" class="profile-meta-item"
+                            >Продуктов найдено:
+                            <span id="profileProductCount">0</span></span
+                        >
+                    </div>
                 </header>
-
                 <main class="profile-content">
                     <section class="profile-section">
                         <h2>Личная информация</h2>
@@ -134,27 +187,38 @@
                             <div class="info-item">
                                 <span class="info-label">Город:</span>
                                 <span class="info-value" id="profileCity"
-                                    >Москва</span
+                                    >КАКОЙ-ТО ГОРОД</span
                                 >
                             </div>
+                            <button id="PasswordChangeBtn">
+                                Сменить пароль
+                            </button>
                             <div class="info-item">
                                 <span class="info-label">Телефон:</span>
                                 <span class="info-value" id="profilePhone"
-                                    >+7 (123) 456-78-90</span
+                                    >какой-то телефон</span
                                 >
                             </div>
                         </div>
                     </section>
-
                     <section class="profile-section">
                         <h2>О себе</h2>
-                        <p id="profileAbout">
-                            Я веб-разработчик с 5-летним опытом работы.
-                            Специализируюсь на создании пользовательских
-                            интерфейсов. Люблю чистый код и продуманную
-                            архитектуру приложений. В свободное время
-                            путешествую и фотографирую.
-                        </p>
+                        <div class="about-icons">
+                            <span>КАКАЯ-ТО ИНФОРМАЦИЯ</span>
+                            <span>КАКАЯ-ТО ИНФОРМАЦИЯ</span>
+                            <span>КАКАЯ-ТО ИНФОРМАЦИЯ</span>
+                        </div>
+                        <p id="profileAbout">КАКАЯ-ТО ИНФОРМАЦИЯ</p>
+                    </section>
+                    <section class="profile-section">
+                        <h2>Интересы и достижения</h2>
+                        <div class="achievements">
+                            <div class="achievement-card">
+                                🏆 100+ продуктов найдено
+                            </div>
+                            <div class="achievement-card">🥗 ЗОЖ энтузиаст</div>
+                            <div class="achievement-card">📅 С нами с 2024</div>
+                        </div>
                     </section>
                     <a href="#" class="logout-btn" id="logoutBtn"
                         >Выйти из профиля</a
@@ -169,40 +233,176 @@
         >
             <div class="products-container">
                 <header class="products-header">
-                    <h1>Ваши продукты</h1>
+                    <h1
+                        style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                        "
+                    >
+                        Ваши продукты
+                        <span
+                            id="productStatusMessage"
+                            class="product-status-message"
+                        ></span>
+                    </h1>
                     <div class="search-container">
                         <input
                             type="text"
                             id="productSearch"
                             placeholder="Поиск продуктов..."
+                            aria-label="Поиск продуктов"
                         />
-                        <button id="searchBtn">Найти</button>
+                        <button id="searchBtn" aria-label="Найти продукт">
+                            Найти
+                        </button>
                     </div>
                 </header>
-
-                <div class="categories">
-                    <button class="category-btn active" data-category="all">
-                        Все
-                    </button>
-                    <button class="category-btn" data-category="vegetables">
-                        Овощи
-                    </button>
-                    <button class="category-btn" data-category="fruits">
-                        Фрукты
-                    </button>
-                    <button class="category-btn" data-category="nuts">
-                        Орехи
-                    </button>
-                    <button class="category-btn" data-category="dairy">
-                        Молочные продукты
-                    </button>
+                <div
+                    id="searchLoading"
+                    class="search-loading"
+                    style="display: none"
+                >
+                    <div class="spinner"></div>
                 </div>
-
+                <section class="history-section">
+                    <h2>Ранее полученные продукты</h2>
+                    <div class="history-products" id="historyProducts"></div>
+                </section>
                 <div class="products-grid" id="productsGrid">
                     <!-- Продукты будут добавляться динамически через JS -->
                 </div>
             </div>
         </div>
+        <!-- Страница избранного -->
+        <div
+            class="container favorites-page"
+            id="favoritesPage"
+            style="display: none"
+        >
+            <div class="favorites-container">
+                <header class="favorites-header">
+                    <div class="favorites-title-section">
+                        <h1>❤️ Избранные продукты</h1>
+                        <p class="favorites-subtitle">
+                            Ваши любимые продукты для быстрого доступа
+                        </p>
+                    </div>
+                    <div class="favorites-stats">
+                        <div class="stat-card">
+                            <span class="stat-number" id="favoritesCount"
+                                >0</span
+                            >
+                            <span class="stat-label">в избранном</span>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="favorites-content">
+                    <div class="favorites-grid" id="favoritesGrid">
+                        <!-- Избранные продукты будут добавляться динамически -->
+                    </div>
+
+                    <div
+                        class="empty-favorites"
+                        id="emptyFavorites"
+                        style="display: none"
+                    >
+                        <div class="empty-icon">⭐</div>
+                        <h3>Пока нет избранных продуктов</h3>
+                        <p>
+                            Найдите продукты и добавьте их в избранное, чтобы
+                            они появились здесь
+                        </p>
+                        <button
+                            class="browse-products-btn"
+                            onclick="document.getElementById('navProducts').click()"
+                        >
+                            Найти продукты
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <script src="index.js"></script>
+
+        <!-- Product Found Modal -->
+        <div id="productModal" class="product-modal">
+            <div class="modal-content">
+                <button class="modal-close-btn" id="modalCloseBtn">
+                    <i class="fa fa-times"></i>
+                </button>
+                <div class="modal-header">
+                    <h2 id="modalProductName"></h2>
+                    <span
+                        id="modalProductCategory"
+                        class="modal-category"
+                    ></span>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-nutrition-grid">
+                        <div class="nutrition-card protein">
+                            <div class="nutrition-icon">🥩</div>
+                            <div class="nutrition-info">
+                                <span class="nutrition-label">Белки</span>
+                                <span
+                                    class="nutrition-value"
+                                    id="modalProtein"
+                                ></span>
+                            </div>
+                        </div>
+                        <div class="nutrition-card fat">
+                            <div class="nutrition-icon">🥑</div>
+                            <div class="nutrition-info">
+                                <span class="nutrition-label">Жиры</span>
+                                <span
+                                    class="nutrition-value"
+                                    id="modalFat"
+                                ></span>
+                            </div>
+                        </div>
+                        <div class="nutrition-card carbs">
+                            <div class="nutrition-icon">🍞</div>
+                            <div class="nutrition-info">
+                                <span class="nutrition-label">Углеводы</span>
+                                <span
+                                    class="nutrition-value"
+                                    id="modalCarbs"
+                                ></span>
+                            </div>
+                        </div>
+                        <div class="nutrition-card calories">
+                            <div class="nutrition-icon">🔥</div>
+                            <div class="nutrition-info">
+                                <span class="nutrition-label">Калории</span>
+                                <span
+                                    class="nutrition-value"
+                                    id="modalCalories"
+                                ></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-summary">
+                        <div class="calories-highlight">
+                            <span
+                                class="calories-number"
+                                id="modalCaloriesHighlight"
+                            ></span>
+                            <span class="calories-text">калорий на 100г</span>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button
+                            class="favorite-btn"
+                            id="favoriteBtn"
+                            title="Добавить в избранное"
+                        >
+                            <i class="fa fa-star"></i>
+                            <span>Добавить в избранное</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </body>
 </html>
