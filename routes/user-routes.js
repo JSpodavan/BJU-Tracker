@@ -59,5 +59,10 @@ userRouter.get(
 userRouter.post('/user/logout', userController.deleteToken);
 userRouter.post('/user/send-reset-email', userController.sendEmail);
 userRouter.post('/user/switch-password', userController.switchPassword);
+userRouter.get('/user/verify-email', userController.verify);
+userRouter.post(
+    '/user/resend-verification',
+    userController.resend_verification
+);
 
 export default userRouter;

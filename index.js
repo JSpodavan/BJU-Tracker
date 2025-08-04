@@ -130,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const popup_space = document.getElementById('popup-space');
     const popup_text = document.getElementById('popup-text');
     const popup_title = document.getElementById('popup_title');
+    const popup_Btn = document.getElementById('popup-closeBtn');
     const URL = 'http://localhost:5000';
     const profilePage = document.getElementById('profilePage');
     const loginBtn = document.getElementById('loginBtn');
@@ -237,11 +238,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 const data = await response.json();
                 if (response.ok) {
-                    alert('Вы успешно зарегистрировались');
-                    document.getElementById('authPage').style.display = 'none';
-                    document.getElementById('mainNavbar').style.display =
-                        'flex';
-                    profilePage.style.display = 'block';
+                    popup_space.style.display = 'block';
+                    popup_title.textContent = 'Регистрация';
+                    popup_text.textContent =
+                        'Письмо с подтверждением отправлено на почту';
                 } else {
                     if (data.errors) {
                         alert(data.errors.map((err) => err.msg).join('\n'));
@@ -276,20 +276,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             const data = await response.json();
 
             if (response.ok) {
-                alert('Вы успешно вошли');
-                document.getElementById('authPage').style.display = 'none';
-                document.getElementById('mainNavbar').style.display = 'flex';
-                profilePage.style.display = 'block';
-                profileUsername.textContent = data.name;
-                profileEmail.textContent = data.email;
+                popup_space.style.display = 'block';
+                popup_title.textContent = 'Вход в аккаунт';
+                popup_text.textContent = 'Вы успешно вошли в аккаунт';
+                setTimeout(() => {
+                    document.getElementById('authPage').style.display = 'none';
+                    document.getElementById('mainNavbar').style.display =
+                        'flex';
+                    profilePage.style.display = 'block';
+                    profileUsername.textContent = data.name;
+                    profileEmail.textContent = data.email;
+                }, 2000);
             } else {
-                if (data.errors) {
-                    alert(data.errors.map((err) => err.msg).join('\n'));
-                } else if (data.message) {
-                    alert(data.message);
-                } else {
-                    alert('Произошла неизвестная ошибка');
-                }
+                popup_space.style.display = 'block';
+                popup_title.textContent = 'Подтверждение почты';
+                popup_text.textContent = 'Вы не подтвердили почту';
             }
         } catch (error) {
             console.error('Ошибка', error);
@@ -318,20 +319,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             productCard.innerHTML = `
                 <h3>${product.name}</h3>
                 <span class="category">${product.category}</span>
-                <div class="nutrition-facts">
-                    <div class="nutrition-item">
+                <div class="nutrition-facts1">
+                    <div class="nutrition-item1">
                         <span class="label">Белки</span>
                         <span class="value">${product.protein}g</span>
                     </div>
-                    <div class="nutrition-item">
+                    <div class="nutrition-item1">
                         <span class="label">Жиры</span>
                         <span class="value">${product.fat}g</span>
                     </div>
-                    <div class="nutrition-item">
+                    <div class="nutrition-item1">
                         <span class="label">Углеводы</span>
                         <span class="value">${product.carbs}g</span>
                     </div>
-                    <div class="nutrition-item">
+                    <div class="nutrition-item1">
                         <span class="label">На 100г</span>
                         <span class="value">${product.calories} ккал</span>
                     </div>
@@ -349,11 +350,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     logoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        await fetch(`${URL}/user/logout`, {
-            method: 'POST',
-            credentials: 'include',
-        });
-        location.reload();
+        popup_space.style.display = 'block';
+        popup_title.textContent = 'Выход из аккаунта';
+        popup_text.textContent = 'Вы успешно вышли из аккаунта';
+        popup_Btn.style.display = 'none';
+        setTimeout(async () => {
+            await fetch(`${URL}/user/logout`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+            location.reload();
+        }, 2500);
     });
     function updateProductCount() {
         const count = document.querySelectorAll('.history-product-card').length;

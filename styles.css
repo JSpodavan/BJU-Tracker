@@ -414,7 +414,7 @@ body {
     font-weight: 500;
 }
 
-.nutrition-facts {
+.nutrition-facts1 {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
@@ -425,19 +425,19 @@ body {
     box-shadow: 0 1px 4px rgba(52, 152, 219, 0.04);
 }
 
-.nutrition-item {
+.nutrition-item1 {
     display: flex;
     flex-direction: column;
 }
 
-.nutrition-item .label {
+.nutrition-item1 .label {
     font-size: 0.85em;
     color: #1976d2;
     margin-bottom: 5px;
     font-weight: 600;
 }
 
-.nutrition-item .value {
+.nutrition-item1 .value {
     font-weight: bold;
     color: #2c3e50;
     font-size: 1.1em;
@@ -842,20 +842,20 @@ body {
     background: rgba(255, 255, 255, 0.8);
 }
 
-.nutrition-info {
+.nutrition-info1 {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 5px;
 }
 
-.nutrition-label {
+.nutrition-label1 {
     font-size: 0.9em;
     color: #666;
     font-weight: 500;
 }
 
-.nutrition-value {
+.nutrition-value1 {
     font-size: 1.4em;
     font-weight: 700;
     color: #2c3e50;
