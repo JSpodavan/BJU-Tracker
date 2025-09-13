@@ -90,6 +90,7 @@ class UserController {
         }
         if (!person.rows[0].email_verified) {
             return res.status(401).json({
+                status: 'Ошибка',
                 message: 'Почта не подтверждена',
             });
         }
@@ -129,25 +130,38 @@ class UserController {
         return res.status(200).json({ success: true });
     }
     async sendEmail(req, res) {
-        const token = req.cookies.auth_token;
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const resetToken = crypto.randomBytes(32).toString('hex');
         const resetTokenTime = new Date(Date.now() + 3600000);
-        await pool.query(
-            'UPDATE users SET reset_token=$1, reset_token_time=$2 WHERE id=$3',
-            [resetToken, resetTokenTime, decoded.id]
-        );
+        let email = 0;
+        if (req.body.email == undefined) {
+            email = decoded.email;
+            const token = req.cookies.auth_token;
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        } else {
+            email = req.body.email;
+        }
+        if (email == undefined) {
+            await pool.query(
+                'UPDATE users SET reset_token=$1, reset_token_time=$2 WHERE id=$3',
+                [resetToken, resetTokenTime, decoded.id]
+            );
+        } else {
+            await pool.query(
+                'UPDATE users SET reset_token=$1, reset_token_time=$2 WHERE email=$3',
+                [resetToken, resetTokenTime, email]
+            );
+        }
 
         const resetLink = `http://localhost:5000/resetPassword.html?token=${resetToken}`;
 
         const mailOptions = {
             from: process.env.EMAIL,
-            to: decoded.email,
+            to: email,
             subject: 'Сброс пароля',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #2c3e50;">Сброс пароля</h2>
-                    <p>Вы запросили сброс пароля для аккаунта ${decoded.email}.</p>
+                    <p>Вы запросили сброс пароля для аккаунта ${email}.</p>
                     <p style="margin: 20px 0;">
                         <a href="${resetLink}" 
                            style="background-color: #3498db; 

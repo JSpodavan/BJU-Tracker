@@ -153,6 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const productStatusMessage = document.getElementById(
         'productStatusMessage'
     );
+    const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
     const productModal = document.getElementById('productModal');
     const modalCloseBtn = document.getElementById('modalCloseBtn');
     const modalProductName = document.getElementById('modalProductName');
@@ -203,6 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         if (response.ok) {
             const data = await response.json();
+            document.body.classList.add('logged-in');
             document.getElementById('authPage').style.display = 'none';
             document.getElementById('mainNavbar').style.display = 'flex';
             profilePage.style.display = 'block';
@@ -280,6 +282,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 popup_title.textContent = 'Вход в аккаунт';
                 popup_text.textContent = 'Вы успешно вошли в аккаунт';
                 setTimeout(() => {
+                    document.body.classList.add('logged-in');
                     document.getElementById('authPage').style.display = 'none';
                     document.getElementById('mainNavbar').style.display =
                         'flex';
@@ -289,8 +292,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, 2000);
             } else {
                 popup_space.style.display = 'block';
-                popup_title.textContent = 'Подтверждение почты';
-                popup_text.textContent = 'Вы не подтвердили почту';
+                popup_title.textContent = data.status;
+                popup_text.textContent = data.message;
             }
         } catch (error) {
             console.error('Ошибка', error);
@@ -319,7 +322,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             productCard.innerHTML = `
                 <h3>${product.name}</h3>
                 <span class="category">${product.category}</span>
-                <div class="nutrition-facts1">
+                <div class="nutrition-facts">
                     <div class="nutrition-item1">
                         <span class="label">Белки</span>
                         <span class="value">${product.protein}g</span>
@@ -440,24 +443,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <h3>${data.name}</h3>
                     <span class="category">${data.category}</span>
                     <div class="nutrition-facts">
-                        <div class="nutrition-item">
+                        <div class="nutrition-item1">
                             <span class="label">Белки</span>
                             <span class="value">${data.protein}g</span>
                         </div>
-                        <div class="nutrition-item">
+                        <div class="nutrition-item1">
                             <span class="label">Жиры</span>
                             <span class="value">${data.fat}g</span>
                         </div>
-                        <div class="nutrition-item">
+                        <div class="nutrition-item1">
                             <span class="label">Углеводы</span>
                             <span class="value">${data.carbs}g</span>
                         </div>
-                        <div class="nutrition-item">
+                        <div class="nutrition-item1">
                             <span class="label">На 100г</span>
                             <span class="value">${data.calories} ккал</span>
                         </div>
                     </div>
                     <div class="calories-badge">${data.calories} калорий</div>
+                    <button class="history-favorite-btn" onclick="addToFavorites('${data.name}')" title="Добавить в избранное">
+                        <i class="fa fa-star"></i>
+                    </button>
                 `;
                 historyContainer.appendChild(productCard);
 
@@ -700,4 +706,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
     });
+    forgotPasswordBtn.addEventListener('click', async () => {
+        document.getElementById('forgotPasswordModal').style.display = 'flex';
+    });
+    document
+        .getElementById('forgotModalClose')
+        .addEventListener('click', () => {
+            document.getElementById('forgotPasswordModal').style.display =
+                'none';
+        });
+    document
+        .getElementById('sendResetBtn')
+        .addEventListener('click', async (e) => {
+            e.preventDefault();
+            const response = await fetch(`${URL}/user/send-reset-email`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    email: document.getElementById('forgotEmail').value,
+                }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            document.getElementById('forgotPasswordModal').style.display =
+                'none';
+            popup_space.style.display = 'block';
+            popup_text.textContent = `Письмо со сменой пароля отправлено на почту ${
+                document.getElementById('forgotEmail').value
+            }`;
+            popup_title.textContent = 'Письмо отправлено';
+        });
 });

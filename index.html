@@ -144,6 +144,12 @@
                             Ещё не зарегистрированы?
                             <a href="#" id="showRegisterBtn">Создать аккаунт</a>
                         </p>
+                        <p>
+                            Забыли пароль?
+                            <a href="#" id="forgotPasswordBtn"
+                                >Восстановить пароль</a
+                            >
+                        </p>
                     </div>
                 </div>
             </div>
@@ -324,6 +330,35 @@
                 </div>
             </div>
         </div>
+
+        <!-- Forgot Password Modal -->
+        <div id="forgotPasswordModal" class="forgot-password-modal">
+            <div class="forgot-modal-content">
+                <button class="forgot-modal-close" id="forgotModalClose">
+                    <i class="fa fa-times"></i>
+                </button>
+                <div class="forgot-modal-header">
+                    <h2>Восстановление пароля</h2>
+                    <p>Введите ваш email для получения ссылки восстановления</p>
+                </div>
+                <div class="forgot-modal-body">
+                    <form id="forgotPasswordForm">
+                        <div class="form-group">
+                            <input
+                                type="email"
+                                id="forgotEmail"
+                                placeholder="Электронная почта"
+                                required
+                            />
+                        </div>
+                        <button class="submit-btn" id="sendResetBtn">
+                            Отправить письмо
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <script src="index.js"></script>
 
         <!-- Product Found Modal -->
