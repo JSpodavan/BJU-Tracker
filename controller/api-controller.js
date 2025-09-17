@@ -179,7 +179,10 @@ class apiController {
                 'SELECT * FROM products WHERE id =ANY($1)',
                 [product_ids]
             );
-            res.json(poolResponse2.rows);
+            res.json({
+                products: poolResponse2.rows,
+                products_ids: product_ids,
+            });
         } catch (error) {
             console.log(error);
         }
@@ -201,6 +204,131 @@ class apiController {
         } catch (error) {
             console.log(error);
             res.json({ answer: 'Произошла ошибка' });
+        }
+    }
+    async createDish(req, res) {
+        try {
+            const { name, products, user_id } = req.body;
+            const poolResponse = await pool.query(
+                'INSERT INTO dishes (user_id, name, products) VALUES ($1,$2,$3)',
+                [user_id, name, products]
+            );
+            res.status(200).json({
+                message: 'Блюдо создано',
+                status: 'Успешно',
+            });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({
+                message: 'Ошибка сервера',
+                status: 'Неудача',
+            });
+        }
+    }
+    async loadDishList(req, res) {
+        const id = req.params.id;
+        const poolResponse = await pool.query(
+            'SELECT * FROM dishes WHERE user_id=$1',
+            [id]
+        );
+        const res1 = poolResponse.rows;
+
+        for (let i = 0; i < res1.length; i++) {
+            let calories = 0;
+            let protein = 0;
+            let fat = 0;
+            let carbs = 0;
+
+            if (res1[i].products && res1[i].products.length > 0) {
+                const products_to_search = res1[i].products
+                    .replace('{', '')
+                    .replace('}', '')
+                    .replaceAll('"', '')
+                    .split(',');
+
+                for (const product of products_to_search) {
+                    const poolResponse2 = await pool.query(
+                        'SELECT calories, protein, fat, carbs FROM products WHERE name=$1',
+                        [product]
+                    );
+                    if (poolResponse2.rows.length > 0) {
+                        calories +=
+                            parseInt(poolResponse2.rows[0].calories) || 0;
+                        protein += parseInt(poolResponse2.rows[0].protein) || 0;
+                        fat += parseInt(poolResponse2.rows[0].fat) || 0;
+                        carbs += parseInt(poolResponse2.rows[0].carbs) || 0;
+                    }
+                }
+            }
+
+            res1[i].calories = calories;
+            res1[i].protein = protein;
+            res1[i].fat = fat;
+            res1[i].carbs = carbs;
+        }
+
+        res.json(res1);
+    }
+    async deleteDish(req, res) {
+        const { name } = req.body;
+        const poolResponse = await pool.query(
+            'DELETE FROM dishes WHERE name=$1',
+            [name]
+        );
+        res.json({ message: 'Блюдо успешно удалено', status: 'Успех' });
+    }
+    async createMeal(req, res) {
+        const { user_id, day, meal, dish } = req.body;
+        const poolResponse0 = await pool.query(
+            'SELECT day_week, meal FROM dishes WHERE user_id=$1 AND name=$2',
+            [user_id, dish]
+        );
+        var days;
+        var meals;
+        if (poolResponse0.rows[0].day_week != null) {
+            days = poolResponse0.rows[0].day_week + ', ' + day;
+            meals = poolResponse0.rows[0].meal + ', ' + meal;
+        } else {
+            days = day;
+            meals = meal;
+        }
+        const poolResponse = await pool.query(
+            'UPDATE dishes SET day_week =$1, meal=$2 WHERE user_id=$3 AND name=$4 RETURNING *',
+            [days, meals, user_id, dish]
+        );
+        res.status(200).json({ message: 'ВСЕ ЧЕТКО' });
+    }
+    async getUserProfile(req, res) {
+        try {
+            const token = req.cookies.auth_token;
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+            const result = await pool.query(
+                'SELECT about FROM users WHERE id = $1',
+                [decoded.id]
+            );
+
+            res.json({ about: result.rows[0]?.about || '' });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ error: 'Server error' });
+        }
+    }
+    async updateAbout(req, res) {
+        try {
+            const { about } = req.body;
+            const token = req.cookies.auth_token;
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+            await pool.query('UPDATE users SET about = $1 WHERE id = $2', [
+                about,
+                decoded.id,
+            ]);
+
+            res.json({ success: true });
+        } catch (error) {
+            console.log(error);
+            res.status(500).json({ error: 'Server error' });
         }
     }
 }

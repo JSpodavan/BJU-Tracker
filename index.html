@@ -45,6 +45,7 @@
                     <button id="navFavorites" class="navbar-link">
                         Избранное
                     </button>
+                    <button id="navDiet" class="navbar-link">Моя диета</button>
                     <button id="navLogout" class="navbar-link">Выйти</button>
                 </div>
             </div>
@@ -185,36 +186,97 @@
                         <h2>Личная информация</h2>
                         <div class="profile-info">
                             <div class="info-item">
-                                <span class="info-label">email:</span>
-                                <span class="info-value" id="profileEmail"
-                                    >15 мая 1990</span
-                                >
+                                <div class="info-icon">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div class="info-content">
+                                    <span class="info-label">Email</span>
+                                    <span class="info-value" id="profileEmail"
+                                        >user@example.com</span
+                                    >
+                                </div>
                             </div>
                             <div class="info-item">
-                                <span class="info-label">Город:</span>
-                                <span class="info-value" id="profileCity"
-                                    >КАКОЙ-ТО ГОРОД</span
-                                >
+                                <div class="info-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="info-content">
+                                    <span class="info-label">Город</span>
+                                    <span class="info-value" id="profileCity"
+                                        >Москва</span
+                                    >
+                                </div>
                             </div>
-                            <button id="PasswordChangeBtn">
-                                Сменить пароль
+                            <div class="info-item">
+                                <div class="info-icon">
+                                    <i class="fas fa-phone"></i>
+                                </div>
+                                <div class="info-content">
+                                    <span class="info-label">Телефон</span>
+                                    <span class="info-value" id="profilePhone"
+                                        >+7 (999) 123-45-67</span
+                                    >
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-icon">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </div>
+                                <div class="info-content">
+                                    <span class="info-label"
+                                        >Дата регистрации</span
+                                    >
+                                    <span class="info-value" id="profileRegDate"
+                                        >15 января 2024</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+                        <div class="profile-actions">
+                            <button id="PasswordChangeBtn" class="action-btn">
+                                <i class="fas fa-key"></i>
+                                <span>Сменить пароль</span>
                             </button>
-                            <div class="info-item">
-                                <span class="info-label">Телефон:</span>
-                                <span class="info-value" id="profilePhone"
-                                    >какой-то телефон</span
-                                >
-                            </div>
                         </div>
                     </section>
                     <section class="profile-section">
-                        <h2>О себе</h2>
-                        <div class="about-icons">
-                            <span>КАКАЯ-ТО ИНФОРМАЦИЯ</span>
-                            <span>КАКАЯ-ТО ИНФОРМАЦИЯ</span>
-                            <span>КАКАЯ-ТО ИНФОРМАЦИЯ</span>
+                        <div class="section-header">
+                            <h2>О себе</h2>
+                            <button
+                                id="editAboutBtn"
+                                class="edit-btn"
+                                title="Редактировать"
+                            >
+                                <i class="fas fa-pen"></i>
+                            </button>
                         </div>
-                        <p id="profileAbout">КАКАЯ-ТО ИНФОРМАЦИЯ</p>
+                        <div class="about-content">
+                            <div class="about-card">
+                                <div class="quote-icon">
+                                    <i class="fas fa-quote-left"></i>
+                                </div>
+                                <p id="profileAbout" class="about-text">
+                                    Расскажите немного о себе, своих интересах и
+                                    целях в фитнесе...
+                                </p>
+                                <div class="about-decoration"></div>
+                            </div>
+                            <textarea
+                                id="aboutTextarea"
+                                style="display: none"
+                                placeholder="Расскажите о себе, своих интересах, целях в фитнесе и питании..."
+                            ></textarea>
+                            <div class="edit-actions" style="display: none">
+                                <button id="saveAboutBtn" class="save-btn">
+                                    <i class="fas fa-check"></i>
+                                    Сохранить
+                                </button>
+                                <button id="cancelAboutBtn" class="cancel-btn">
+                                    <i class="fas fa-times"></i>
+                                    Отмена
+                                </button>
+                            </div>
+                        </div>
                     </section>
                     <section class="profile-section">
                         <h2>Интересы и достижения</h2>
@@ -331,7 +393,294 @@
             </div>
         </div>
 
-        <!-- Forgot Password Modal -->
+        <!-- Diet Page -->
+        <div class="container diet-page" id="dietPage" style="display: none">
+            <div class="diet-container">
+                <header class="diet-header">
+                    <h1>🍽️ Моя диета</h1>
+                    <p class="diet-subtitle">
+                        Планируйте свое питание на неделю
+                    </p>
+                </header>
+
+                <div class="diet-content">
+                    <!-- Meals Section -->
+                    <section class="meals-section">
+                        <h2></h2>
+                        <div class="meals-content">
+                            <div class="meal-creator">
+                                <button
+                                    class="create-dish-btn"
+                                    id="createDishBtn"
+                                >
+                                    + Создать новое блюдо
+                                </button>
+                            </div>
+                            <div class="dishes-list">
+                                <h3>Мои блюда</h3>
+                                <div class="dishes-grid" id="dishesGrid">
+                                    <!-- Created dishes will appear here -->
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Weekly Diet Plan -->
+                    <section class="weekly-diet">
+                        <h2>План питания на неделю</h2>
+                        <div class="days-grid">
+                            <div class="day-block" data-day="monday">
+                                <h3>Понедельник</h3>
+                                <div class="day-meals">
+                                    <div
+                                        class="meal-slot"
+                                        data-meal="breakfast"
+                                    >
+                                        <h4>Завтрак</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="lunch">
+                                        <h4>Обед</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="dinner">
+                                        <h4>Ужин</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="day-block" data-day="tuesday">
+                                <h3>Вторник</h3>
+                                <div class="day-meals">
+                                    <div
+                                        class="meal-slot"
+                                        data-meal="breakfast"
+                                    >
+                                        <h4>Завтрак</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="lunch">
+                                        <h4>Обед</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="dinner">
+                                        <h4>Ужин</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="day-block" data-day="wednesday">
+                                <h3>Среда</h3>
+                                <div class="day-meals">
+                                    <div
+                                        class="meal-slot"
+                                        data-meal="breakfast"
+                                    >
+                                        <h4>Завтрак</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="lunch">
+                                        <h4>Обед</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="dinner">
+                                        <h4>Ужин</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="day-block" data-day="thursday">
+                                <h3>Четверг</h3>
+                                <div class="day-meals">
+                                    <div
+                                        class="meal-slot"
+                                        data-meal="breakfast"
+                                    >
+                                        <h4>Завтрак</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="lunch">
+                                        <h4>Обед</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="dinner">
+                                        <h4>Ужин</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="day-block" data-day="friday">
+                                <h3>Пятница</h3>
+                                <div class="day-meals">
+                                    <div
+                                        class="meal-slot"
+                                        data-meal="breakfast"
+                                    >
+                                        <h4>Завтрак</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="lunch">
+                                        <h4>Обед</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="dinner">
+                                        <h4>Ужин</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="day-block" data-day="saturday">
+                                <h3>Суббота</h3>
+                                <div class="day-meals">
+                                    <div
+                                        class="meal-slot"
+                                        data-meal="breakfast"
+                                    >
+                                        <h4>Завтрак</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="lunch">
+                                        <h4>Обед</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="dinner">
+                                        <h4>Ужин</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="day-block" data-day="sunday">
+                                <h3>Воскресенье</h3>
+                                <div class="day-meals">
+                                    <div
+                                        class="meal-slot"
+                                        data-meal="breakfast"
+                                    >
+                                        <h4>Завтрак</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="lunch">
+                                        <h4>Обед</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                    <div class="meal-slot" data-meal="dinner">
+                                        <h4>Ужин</h4>
+                                        <div class="meal-products"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drag Overlay -->
+        <div id="dragOverlay" class="drag-overlay" style="display: none">
+            <div class="drag-overlay-content">
+                <h3>Выберите день и прием пищи</h3>
+                <div
+                    class="dish-composition"
+                    id="dishComposition"
+                    style="display: none"
+                >
+                    <h4 id="selectedDishName"></h4>
+                    <div class="composition-nutrition">
+                        <div class="nutrition-item">
+                            <span class="nutrition-label">Белки:</span>
+                            <span class="nutrition-value" id="dishProtein"
+                                >0г</span
+                            >
+                        </div>
+                        <div class="nutrition-item">
+                            <span class="nutrition-label">Жиры:</span>
+                            <span class="nutrition-value" id="dishFat">0г</span>
+                        </div>
+                        <div class="nutrition-item">
+                            <span class="nutrition-label">Углеводы:</span>
+                            <span class="nutrition-value" id="dishCarbs"
+                                >0г</span
+                            >
+                        </div>
+                        <div class="nutrition-item">
+                            <span class="nutrition-label">Калории:</span>
+                            <span class="nutrition-value" id="dishCalories"
+                                >0 ккал</span
+                            >
+                        </div>
+                    </div>
+                    <div
+                        class="composition-products"
+                        id="compositionProducts"
+                    ></div>
+                </div>
+                <div class="drag-days-grid">
+                    <div class="drag-day" data-day="monday">
+                        <h4>Пн</h4>
+                        <div class="drag-meal" data-meal="breakfast">
+                            Завтрак
+                        </div>
+                        <div class="drag-meal" data-meal="lunch">Обед</div>
+                        <div class="drag-meal" data-meal="dinner">Ужин</div>
+                    </div>
+                    <div class="drag-day" data-day="tuesday">
+                        <h4>Вт</h4>
+                        <div class="drag-meal" data-meal="breakfast">
+                            Завтрак
+                        </div>
+                        <div class="drag-meal" data-meal="lunch">Обед</div>
+                        <div class="drag-meal" data-meal="dinner">Ужин</div>
+                    </div>
+                    <div class="drag-day" data-day="wednesday">
+                        <h4>Ср</h4>
+                        <div class="drag-meal" data-meal="breakfast">
+                            Завтрак
+                        </div>
+                        <div class="drag-meal" data-meal="lunch">Обед</div>
+                        <div class="drag-meal" data-meal="dinner">Ужин</div>
+                    </div>
+                    <div class="drag-day" data-day="thursday">
+                        <h4>Чт</h4>
+                        <div class="drag-meal" data-meal="breakfast">
+                            Завтрак
+                        </div>
+                        <div class="drag-meal" data-meal="lunch">Обед</div>
+                        <div class="drag-meal" data-meal="dinner">Ужин</div>
+                    </div>
+                    <div class="drag-day" data-day="friday">
+                        <h4>Пт</h4>
+                        <div class="drag-meal" data-meal="breakfast">
+                            Завтрак
+                        </div>
+                        <div class="drag-meal" data-meal="lunch">Обед</div>
+                        <div class="drag-meal" data-meal="dinner">Ужин</div>
+                    </div>
+                    <div class="drag-day" data-day="saturday">
+                        <h4>Сб</h4>
+                        <div class="drag-meal" data-meal="breakfast">
+                            Завтрак
+                        </div>
+                        <div class="drag-meal" data-meal="lunch">Обед</div>
+                        <div class="drag-meal" data-meal="dinner">Ужин</div>
+                    </div>
+                    <div class="drag-day" data-day="sunday">
+                        <h4>Вс</h4>
+                        <div class="drag-meal" data-meal="breakfast">
+                            Завтрак
+                        </div>
+                        <div class="drag-meal" data-meal="lunch">Обед</div>
+                        <div class="drag-meal" data-meal="dinner">Ужин</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="forgotPasswordModal" class="forgot-password-modal">
             <div class="forgot-modal-content">
                 <button class="forgot-modal-close" id="forgotModalClose">
@@ -360,6 +709,7 @@
         </div>
 
         <script src="index.js"></script>
+        <script src="about-edit.js"></script>
 
         <!-- Product Found Modal -->
         <div id="productModal" class="product-modal">
@@ -436,6 +786,73 @@
                             <span>Добавить в избранное</span>
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Selection Modal -->
+        <div class="modal" id="productSelectionModal" style="display: none">
+            <div class="modal-content product-selection-modal">
+                <div class="modal-header">
+                    <h2>Выберите продукты</h2>
+                    <button class="modal-close" id="productSelectionClose">
+                        &times;
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div
+                        class="product-selection-list"
+                        id="productSelectionList"
+                    ></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary" id="addSelectedProductsBtn">
+                        Добавить выбранные продукты
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="dishModal" style="display: none">
+            <div class="modal-content dish-modal-content">
+                <div class="modal-header">
+                    <h2>Создать новое блюдо</h2>
+                    <button class="modal-close" id="dishModalClose">
+                        &times;
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="dish-form">
+                        <div class="form-group">
+                            <label for="dishName">Название блюда</label>
+                            <input
+                                type="text"
+                                id="dishName"
+                                placeholder="Введите название блюда..."
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label>Продукты в блюде</label>
+                            <div
+                                class="dish-products-list"
+                                id="dishProductsList"
+                            >
+                                <div
+                                    class="add-product-placeholder add-product-btn"
+                                >
+                                    <span>+ Добавить продукт</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" id="cancelDishBtn">
+                        Отмена
+                    </button>
+                    <button class="btn-primary" id="saveDishBtn">
+                        Создать блюдо
+                    </button>
                 </div>
             </div>
         </div>

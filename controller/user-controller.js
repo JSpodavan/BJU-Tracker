@@ -133,10 +133,12 @@ class UserController {
         const resetToken = crypto.randomBytes(32).toString('hex');
         const resetTokenTime = new Date(Date.now() + 3600000);
         let email = 0;
+        let decoded = null;
+
         if (req.body.email == undefined) {
-            email = decoded.email;
             const token = req.cookies.auth_token;
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            decoded = jwt.verify(token, process.env.JWT_SECRET);
+            email = decoded.email;
         } else {
             email = req.body.email;
         }

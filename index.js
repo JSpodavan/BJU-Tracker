@@ -91,6 +91,32 @@ async function removeFromFavorites(productName) {
         alert('Ошибка при удалении из избранного');
     }
 }
+async function deleteDish(dishName) {
+    const dishCards = document.querySelectorAll('.dish-card');
+    await fetch('http://localhost:5000/api/deleteDish', {
+        method: 'DELETE',
+        body: JSON.stringify({ name: dishName }),
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    // Remove dish card from dishes grid
+    dishCards.forEach((card) => {
+        if (card.querySelector('h4').textContent === dishName) {
+            card.remove();
+        }
+    });
+
+    // Remove corresponding meal-dish elements from weekly meal plan
+    const mealDishes = document.querySelectorAll('.meal-dish');
+    mealDishes.forEach((mealDish) => {
+        if (mealDish.textContent === dishName) {
+            mealDish.remove();
+        }
+    });
+}
+
 async function addToFavorites(ProductName) {
     try {
         const response = await fetch('http://localhost:5000/api/favourite', {
@@ -148,6 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const navProfile = document.getElementById('navProfile');
     const navProducts = document.getElementById('navProducts');
     const navFavorites = document.getElementById('navFavorites');
+    const navDiet = document.getElementById('navDiet');
     const navLogout = document.getElementById('navLogout');
     const mainNavbar = document.getElementById('mainNavbar');
     const productStatusMessage = document.getElementById(
@@ -180,6 +207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         navProfile.classList.remove('active');
         navProducts.classList.remove('active');
         navFavorites.classList.remove('active');
+        navDiet.classList.remove('active');
         if (page === 'profile') {
             navProfile.classList.add('active');
             switchBtnSpace.style.display = 'none';
@@ -192,7 +220,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             list_btn.classList.remove('active');
             grid_btn.classList.add('active');
         }
-        if (page === 'favorites') navFavorites.classList.add('active');
+        if (page === 'favorites') {
+            navFavorites.classList.add('active');
+            switchBtnSpace.style.display = 'block';
+        }
+        if (page === 'diet') {
+            navDiet.classList.add('active');
+            switchBtnSpace.style.display = 'none';
+        }
     }
     async function checkAuth() {
         const response = await fetch(`${URL}/user/auth`, {
@@ -210,6 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             profilePage.style.display = 'block';
             profileUsername.textContent = data.user.name;
             profileEmail.textContent = data.user.email;
+            localStorage.setItem('user_id', data.user.id);
         }
     }
     await checkAuth();
@@ -279,6 +315,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (response.ok) {
                 popup_space.style.display = 'block';
+                localStorage.setItem('user_id', data.id);
                 popup_title.textContent = 'Вход в аккаунт';
                 popup_text.textContent = 'Вы успешно вошли в аккаунт';
                 setTimeout(() => {
@@ -300,6 +337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     navProfile.addEventListener('click', () => {
+        document.getElementById('dietPage').style.display = 'none';
         profilePage.style.display = 'block';
         productsPage.style.display = 'none';
         document.getElementById('favoritesPage').style.display = 'none';
@@ -307,6 +345,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     navProducts.addEventListener('click', async () => {
         profilePage.style.display = 'none';
+        document.getElementById('dietPage').style.display = 'none';
         productsPage.style.display = 'block';
         document.getElementById('favoritesPage').style.display = 'none';
         setActiveNav('products');
@@ -399,6 +438,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && productModal.style.display === 'flex') {
             hideProductModal();
+        }
+        if (e.key === 'Escape' && dishModal.style.display === 'flex') {
+            dishModal.style.display = 'none';
+            dishNameInput.value = '';
+        }
+        if (
+            e.key === 'Escape' &&
+            productSelectionModal.style.display === 'flex'
+        ) {
+            productSelectionModal.style.display = 'none';
         }
     });
 
@@ -515,11 +564,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         e.preventDefault();
         switchBtnSpace.style.display = 'block';
         const response = await fetch(`${URL}/api/loadFavourite`);
-        const products = await response.json();
+        let products = await response.json();
+        products = products.products;
         localStorage.setItem('products', JSON.stringify(products));
-        console.log(products);
         profilePage.style.display = 'none';
         productsPage.style.display = 'none';
+        document.getElementById('dietPage').style.display = 'none';
         document.getElementById('favoritesPage').style.display = 'block';
         setActiveNav('favorites');
 
@@ -706,15 +756,352 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
     });
+    navDiet.addEventListener('click', async () => {
+        profilePage.style.display = 'none';
+        productsPage.style.display = 'none';
+        document.getElementById('favoritesPage').style.display = 'none';
+        document.getElementById('dietPage').style.display = 'block';
+        setActiveNav('diet');
+        try {
+            const response = await fetch(
+                `${URL}/api/DishList/${localStorage.getItem('user_id')}`
+            );
+            const data = await response.json();
+
+            const dishesGrid = document.getElementById('dishesGrid');
+            dishesGrid.innerHTML = '';
+            document.querySelectorAll('.meal-products').forEach((slot) => {
+                slot.innerHTML = '';
+            });
+            if (data && data.length > 0) {
+                data.forEach((dish) => {
+                    const productsCount =
+                        dish.products.length -
+                        dish.products.replace(',', '').length +
+                        1;
+                    const dishCard = document.createElement('div');
+                    dishCard.className = 'dish-card';
+                    dishCard.innerHTML = `
+                        <button class="dish-delete-btn" onclick="event.stopPropagation(); deleteDish('${dish.name}')">×</button>
+                        <h4>${dish.name}</h4>
+                        <div class="dish-products-count">${productsCount} продуктов</div>
+                    `;
+                    dishCard.addEventListener('click', () => {
+                        const dragOverlay =
+                            document.getElementById('dragOverlay');
+                        const dishComposition =
+                            document.getElementById('dishComposition');
+                        const selectedDishName =
+                            document.getElementById('selectedDishName');
+                        const compositionProducts = document.getElementById(
+                            'compositionProducts'
+                        );
+                        dragOverlay.style.display = 'flex';
+                        dragOverlay.dataset.selectedDish = dish.name;
+                        selectedDishName.textContent = dish.name;
+                        compositionProducts.innerHTML = '';
+
+                        if (dish.products) {
+                            const products = dish.products
+                                .replace('{', '')
+                                .replace('}', '')
+                                .replaceAll('"', '')
+                                .split(',');
+                            document.getElementById('dishProtein').textContent =
+                                dish.protein + 'г';
+                            document.getElementById('dishFat').textContent =
+                                dish.fat + 'г';
+                            document.getElementById('dishCarbs').textContent =
+                                dish.carbs + 'г';
+                            document.getElementById(
+                                'dishCalories'
+                            ).textContent = dish.calories + ' ккал';
+                            products.forEach((product) => {
+                                const productElement =
+                                    document.createElement('div');
+                                productElement.className =
+                                    'composition-product';
+                                productElement.textContent = product.trim();
+                                compositionProducts.appendChild(productElement);
+                            });
+                        }
+
+                        dishComposition.style.display = 'block';
+                    });
+                    dishesGrid.appendChild(dishCard);
+                    if (dish.day_week && dish.meal) {
+                        const days = dish.day_week.split(',');
+                        const meals = dish.meal.split(',');
+
+                        days.forEach((day, index) => {
+                            if (meals[index]) {
+                                const dayTrimmed = day.trim();
+                                const mealTrimmed = meals[index].trim();
+                                const mealSlot = document.querySelector(
+                                    `[data-day="${dayTrimmed}"] [data-meal="${mealTrimmed}"] .meal-products`
+                                );
+                                if (mealSlot) {
+                                    const dishElement =
+                                        document.createElement('div');
+                                    dishElement.className = 'meal-dish';
+                                    dishElement.textContent = dish.name;
+                                    mealSlot.appendChild(dishElement);
+                                }
+                            }
+                        });
+                    }
+                });
+            } else {
+                console.log('нет блюд');
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки', error);
+        }
+    });
+
+    const createDishBtn = document.getElementById('createDishBtn');
+    const dishModal = document.getElementById('dishModal');
+    const cancelDishBtn = document.getElementById('cancelDishBtn');
+    const saveDishBtn = document.getElementById('saveDishBtn');
+    const dishNameInput = document.getElementById('dishName');
+    const productSelectionModal = document.getElementById(
+        'productSelectionModal'
+    );
+    const productSelectionClose = document.getElementById(
+        'productSelectionClose'
+    );
+    const productSelectionList = document.getElementById(
+        'productSelectionList'
+    );
+
+    createDishBtn.addEventListener('click', () => {
+        dishModal.style.display = 'flex';
+        dishNameInput.focus();
+    });
+
+    cancelDishBtn.addEventListener('click', () => {
+        dishModal.style.display = 'none';
+        dishNameInput.value = '';
+        const dishProductsList = document.getElementById('dishProductsList');
+        const productItems = dishProductsList.querySelectorAll('.product-item');
+        productItems.forEach((item) => item.remove());
+    });
+
+    dishModal.addEventListener('click', (e) => {
+        if (e.target === dishModal) {
+            dishModal.style.display = 'none';
+            dishNameInput.value = '';
+        }
+    });
+
+    document.addEventListener('click', async (e) => {
+        if (e.target.closest('.add-product-btn')) {
+            e.preventDefault();
+
+            const response = await fetch(`${URL}/api/loadFavourite`);
+            let products = await response.json();
+            localStorage.setItem('products_ids', products.products_ids);
+            products = products.products;
+            productSelectionList.innerHTML = '';
+
+            if (products.length === 0) {
+                productSelectionList.innerHTML =
+                    '<p style="text-align: center; color: #666; padding: 2rem;">Нет избранных продуктов</p>';
+            } else {
+                products.forEach((product) => {
+                    const productCard = document.createElement('div');
+                    productCard.className = 'selectable-product-card';
+                    productCard.innerHTML = `
+                        <input type="checkbox" class="selectable-product-checkbox">
+                        <div class="selectable-product-info">
+                            <div class="selectable-product-name">${product.name}</div>
+                            <div class="selectable-product-nutrition">
+                                <span>${product.calories} ккал</span>
+                                <span>Б ${product.protein}г</span>
+                                <span>Ж ${product.fat}г</span>
+                                <span>У ${product.carbs}г</span>
+                            </div>
+                        </div>
+                    `;
+
+                    productCard.addEventListener('click', (e) => {
+                        if (e.target.type !== 'checkbox') {
+                            const checkbox = productCard.querySelector(
+                                '.selectable-product-checkbox'
+                            );
+                            checkbox.checked = !checkbox.checked;
+                        }
+                        productCard.classList.toggle(
+                            'selected',
+                            productCard.querySelector(
+                                '.selectable-product-checkbox'
+                            ).checked
+                        );
+                    });
+
+                    productSelectionList.appendChild(productCard);
+                });
+            }
+
+            productSelectionModal.style.display = 'flex';
+        }
+    });
+
+    productSelectionClose.addEventListener('click', () => {
+        productSelectionModal.style.display = 'none';
+    });
+
+    productSelectionModal.addEventListener('click', (e) => {
+        if (e.target === productSelectionModal) {
+            productSelectionModal.style.display = 'none';
+        }
+    });
+
+    const dishModalClose = document.getElementById('dishModalClose');
+    const addSelectedProductsBtn = document.getElementById(
+        'addSelectedProductsBtn'
+    );
+
+    dishModalClose.addEventListener('click', () => {
+        dishModal.style.display = 'none';
+        dishNameInput.value = '';
+    });
+
+    addSelectedProductsBtn.addEventListener('click', () => {
+        const selectedProducts = document.querySelectorAll(
+            '.selectable-product-checkbox:checked'
+        );
+        const dishProductsList = document.getElementById('dishProductsList');
+
+        selectedProducts.forEach((checkbox) => {
+            const productCard = checkbox.closest('.selectable-product-card');
+            const productName = productCard.querySelector(
+                '.selectable-product-name'
+            ).textContent;
+
+            const productItem = document.createElement('div');
+            productItem.className = 'product-item';
+            productItem.innerHTML = `
+                <div class="product-image-placeholder">
+                    <span>🍽️</span>
+                </div>
+                <div class="product-name">${productName}</div>
+            `;
+
+            dishProductsList.insertBefore(
+                productItem,
+                dishProductsList.querySelector('.add-product-btn')
+            );
+        });
+
+        productSelectionModal.style.display = 'none';
+    });
+
+    saveDishBtn.addEventListener('click', async () => {
+        const dishName = dishNameInput.value.trim();
+        if (dishName) {
+            const dishProductsList =
+                document.getElementById('dishProductsList');
+            const productItems =
+                dishProductsList.querySelectorAll('.product-item');
+            const productsCount = productItems.length;
+            const dishesGrid = document.getElementById('dishesGrid');
+            const productsNames = [];
+            productItems.forEach((item) => {
+                productsNames.push(
+                    item.querySelector('.product-name').textContent
+                );
+            });
+
+            await fetch(`${URL}/api/createDish`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: dishName,
+                    user_id: localStorage.getItem('user_id'),
+                    products: productsNames,
+                }),
+            });
+
+            // Fetch updated dish data with nutrition values
+            const response = await fetch(
+                `${URL}/api/DishList/${localStorage.getItem('user_id')}`
+            );
+            const dishesData = await response.json();
+            const newDish = dishesData.find((dish) => dish.name === dishName);
+
+            popup_space.style.display = 'block';
+            popup_text.textContent = 'Блюдо успешно создано!';
+            popup_title.textContent = 'Успех';
+
+            const dishCard = document.createElement('div');
+            dishCard.className = 'dish-card';
+            dishCard.innerHTML = `
+                <button class="dish-delete-btn" onclick="event.stopPropagation(); deleteDish('${dishName}')">×</button>
+                <h4>${dishName}</h4>
+                <div class="dish-products-count">${productsCount} продуктов</div>
+            `;
+
+            dishCard.addEventListener('click', () => {
+                const dragOverlay = document.getElementById('dragOverlay');
+                const dishComposition =
+                    document.getElementById('dishComposition');
+                const selectedDishName =
+                    document.getElementById('selectedDishName');
+                const compositionProducts = document.getElementById(
+                    'compositionProducts'
+                );
+
+                dragOverlay.style.display = 'flex';
+                dragOverlay.dataset.selectedDish = dishName;
+                selectedDishName.textContent = dishName;
+                compositionProducts.innerHTML = '';
+
+                // Display products
+                productsNames.forEach((product) => {
+                    const productElement = document.createElement('div');
+                    productElement.className = 'composition-product';
+                    productElement.textContent = product.trim();
+                    compositionProducts.appendChild(productElement);
+                });
+
+                // Set actual nutrition values from server
+                if (newDish) {
+                    document.getElementById('dishProtein').textContent =
+                        newDish.protein + 'г';
+                    document.getElementById('dishFat').textContent =
+                        newDish.fat + 'г';
+                    document.getElementById('dishCarbs').textContent =
+                        newDish.carbs + 'г';
+                    document.getElementById('dishCalories').textContent =
+                        newDish.calories + ' ккал';
+                }
+
+                dishComposition.style.display = 'block';
+            });
+
+            dishesGrid.appendChild(dishCard);
+            productItems.forEach((item) => item.remove());
+            dishModal.style.display = 'none';
+            dishNameInput.value = '';
+        } else {
+            alert('Пожалуйста, введите название блюда');
+        }
+    });
+
     forgotPasswordBtn.addEventListener('click', async () => {
         document.getElementById('forgotPasswordModal').style.display = 'flex';
     });
+
     document
         .getElementById('forgotModalClose')
         .addEventListener('click', () => {
             document.getElementById('forgotPasswordModal').style.display =
                 'none';
         });
+
     document
         .getElementById('sendResetBtn')
         .addEventListener('click', async (e) => {
@@ -736,4 +1123,48 @@ document.addEventListener('DOMContentLoaded', async () => {
             }`;
             popup_title.textContent = 'Письмо отправлено';
         });
+
+    const dragMeals = document.querySelectorAll('.drag-meal');
+    const dragOverlay = document.getElementById('dragOverlay');
+
+    dragMeals.forEach((meal) => {
+        meal.addEventListener('click', async () => {
+            const selectedDish = dragOverlay.dataset.selectedDish;
+            if (selectedDish) {
+                const day = meal.closest('.drag-day').dataset.day;
+                const mealType = meal.dataset.meal;
+                const actualMealSlot = document.querySelector(
+                    `[data-day="${day}"] [data-meal="${mealType}"] .meal-products`
+                );
+                const dishElement = document.createElement('div');
+                dishElement.className = 'meal-dish';
+                dishElement.textContent = selectedDish;
+                actualMealSlot.appendChild(dishElement);
+                const response = await fetch(`${URL}/api/createMeal`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_id: localStorage.getItem('user_id'),
+                        day: day,
+                        meal: mealType,
+                        dish: selectedDish,
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                dragOverlay.style.display = 'none';
+                document.getElementById('dishComposition').style.display =
+                    'none';
+                delete dragOverlay.dataset.selectedDish;
+            }
+        });
+    });
+
+    dragOverlay.addEventListener('click', (e) => {
+        if (e.target === dragOverlay) {
+            dragOverlay.style.display = 'none';
+            document.getElementById('dishComposition').style.display = 'none';
+            delete dragOverlay.dataset.selectedDish;
+        }
+    });
 });
