@@ -33,12 +33,7 @@ async function removeFromFavorites(productName) {
                     card.style.animation = 'fadeOut 0.3s ease';
                     setTimeout(() => {
                         card.remove();
-                        const favoritesCount =
-                            document.getElementById('favoritesCount');
-                        const currentCount = parseInt(
-                            favoritesCount.textContent
-                        );
-                        favoritesCount.textContent = currentCount - 1;
+
                         let remainingCards = '';
                         let index = 0;
                         let cnt = 0;
@@ -175,6 +170,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const navProducts = document.getElementById('navProducts');
     const navFavorites = document.getElementById('navFavorites');
     const navDiet = document.getElementById('navDiet');
+    const navActivity = document.getElementById('navActivity');
     const navLogout = document.getElementById('navLogout');
     const mainNavbar = document.getElementById('mainNavbar');
     const productStatusMessage = document.getElementById(
@@ -197,7 +193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const favoriteBtn = document.getElementById('favoriteBtn');
     const favoritesGrid = document.getElementById('favoritesGrid');
     const emptyFavorites = document.getElementById('emptyFavorites');
-    const favoritesCount = document.getElementById('favoritesCount');
+
     const PasswordChangeBtn = document.getElementById('PasswordChangeBtn');
     const popup_closeBtn = document.getElementById('popup-closeBtn');
     const switchBtnSpace = document.getElementById('switchBtnSpace');
@@ -208,6 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         navProducts.classList.remove('active');
         navFavorites.classList.remove('active');
         navDiet.classList.remove('active');
+        navActivity.classList.remove('active');
         if (page === 'profile') {
             navProfile.classList.add('active');
             switchBtnSpace.style.display = 'none';
@@ -228,6 +225,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             navDiet.classList.add('active');
             switchBtnSpace.style.display = 'none';
         }
+        if (page === 'activity') {
+            navActivity.classList.add('active');
+            switchBtnSpace.style.display = 'none';
+        }
     }
     async function checkAuth() {
         const response = await fetch(`${URL}/user/auth`, {
@@ -246,6 +247,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             profileUsername.textContent = data.user.name;
             profileEmail.textContent = data.user.email;
             localStorage.setItem('user_id', data.user.id);
+            const historyResponse = await fetch(`${URL}/api/loadHistory`, {
+                method: 'GET',
+            });
+            const historyData = await historyResponse.json();
+            document.getElementById('profileProductCount').textContent =
+                historyData.length;
         }
     }
     await checkAuth();
@@ -316,6 +323,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (response.ok) {
                 popup_space.style.display = 'block';
                 localStorage.setItem('user_id', data.id);
+                const historyResponse = await fetch(`${URL}/api/loadHistory`, {
+                    method: 'GET',
+                });
+                const historyData = await historyResponse.json();
+                document.getElementById('profileProductCount').textContent =
+                    historyData.length;
                 popup_title.textContent = 'Вход в аккаунт';
                 popup_text.textContent = 'Вы успешно вошли в аккаунт';
                 setTimeout(() => {
@@ -336,16 +349,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Ошибка', error);
         }
     });
-    navProfile.addEventListener('click', () => {
+    navProfile.addEventListener('click', async () => {
         document.getElementById('dietPage').style.display = 'none';
+        document.getElementById('activityPage').style.display = 'none';
         profilePage.style.display = 'block';
         productsPage.style.display = 'none';
         document.getElementById('favoritesPage').style.display = 'none';
         setActiveNav('profile');
+
+        // Load and update product count for profile stats
+        const response = await fetch(`${URL}/api/loadHistory`, {
+            method: 'GET',
+        });
+        const data = await response.json();
+        document.getElementById('profileProductCount').textContent =
+            data.length;
     });
     navProducts.addEventListener('click', async () => {
         profilePage.style.display = 'none';
         document.getElementById('dietPage').style.display = 'none';
+        document.getElementById('activityPage').style.display = 'none';
         productsPage.style.display = 'block';
         document.getElementById('favoritesPage').style.display = 'none';
         setActiveNav('products');
@@ -570,12 +593,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         profilePage.style.display = 'none';
         productsPage.style.display = 'none';
         document.getElementById('dietPage').style.display = 'none';
+        document.getElementById('activityPage').style.display = 'none';
         document.getElementById('favoritesPage').style.display = 'block';
         setActiveNav('favorites');
 
         favoritesGrid.innerHTML = '';
-
-        favoritesCount.textContent = products.length;
 
         if (products.length === 0) {
             emptyFavorites.style.display = 'block';
@@ -760,6 +782,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         profilePage.style.display = 'none';
         productsPage.style.display = 'none';
         document.getElementById('favoritesPage').style.display = 'none';
+        document.getElementById('activityPage').style.display = 'none';
         document.getElementById('dietPage').style.display = 'block';
         setActiveNav('diet');
         try {
@@ -858,6 +881,196 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Ошибка загрузки', error);
         }
     });
+
+    navActivity.addEventListener('click', async () => {
+        profilePage.style.display = 'none';
+        productsPage.style.display = 'none';
+        document.getElementById('favoritesPage').style.display = 'none';
+        document.getElementById('dietPage').style.display = 'none';
+        document.getElementById('activityPage').style.display = 'block';
+        setActiveNav('activity');
+
+        // Load activity charts
+        await loadActivityCharts();
+    });
+
+    let searchChart = null;
+    let dishChart = null;
+
+    async function loadActivityCharts() {
+        try {
+            const response = await fetch(`${URL}/api/activity`, {
+                method: 'GET',
+                credentials: 'include',
+            });
+            const data = await response.json();
+
+            createSearchChart(data.searches || []);
+            createDishChart(data.dishes || []);
+            updateStats(data.stats || {});
+            updateAchievements(data.stats || {});
+        } catch (error) {
+            console.error('Error loading activity data:', error);
+        }
+    }
+
+    function createSearchChart(searchData) {
+        const ctx = document.getElementById('searchChart');
+        if (!ctx) return;
+        if (searchChart) {
+            searchChart.destroy();
+        }
+        const labels =
+            searchData.length > 0
+                ? searchData.map((item) =>
+                      new Date(item.date).toLocaleDateString('ru-RU')
+                  )
+                : ['Нет данных'];
+        const counts =
+            searchData.length > 0
+                ? searchData.map((item) => parseInt(item.count))
+                : [0];
+
+        searchChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels.reverse(),
+                datasets: [
+                    {
+                        label: 'Продукты найдены',
+                        data: counts.reverse(),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                        },
+                    },
+                },
+            },
+        });
+    }
+    function createDishChart(dishData) {
+        const ctx = document.getElementById('dishChart');
+        if (!ctx) return;
+        if (dishChart) {
+            dishChart.destroy();
+        }
+
+        const labels =
+            dishData.length > 0
+                ? dishData.map((item) =>
+                      new Date(item.date).toLocaleDateString('ru-RU')
+                  )
+                : ['Нет данных'];
+        const counts =
+            dishData.length > 0
+                ? dishData.map((item) => parseInt(item.count))
+                : [0];
+
+        dishChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels.reverse(),
+                datasets: [
+                    {
+                        label: 'Блюда созданы',
+                        data: counts.reverse(),
+                        backgroundColor: '#764ba2',
+                        borderColor: '#764ba2',
+                        borderWidth: 1,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    function updateStats(stats) {
+        document.getElementById('totalSearches').textContent =
+            stats.totalSearches || 0;
+        document.getElementById('totalDishes').textContent =
+            stats.totalDishes || 0;
+        document.getElementById('totalFavorites').textContent =
+            stats.totalFavorites || 0;
+        document.getElementById('streakDays').textContent =
+            stats.streakDays || 0;
+    }
+
+    function updateAchievements(stats) {
+        const achievements = [
+            {
+                icon: '🔍',
+                title: 'Первооткрыватель',
+                desc: 'Найти первый продукт',
+                unlocked: stats.totalSearches >= 1,
+            },
+            {
+                icon: '🍽️',
+                title: 'Шеф-повар',
+                desc: 'Создать первое блюдо',
+                unlocked: stats.totalDishes >= 1,
+            },
+            {
+                icon: '❤️',
+                title: 'Коллекционер',
+                desc: 'Добавить 5 продуктов в избранное',
+                unlocked: stats.totalFavorites >= 5,
+            },
+            {
+                icon: '🏆',
+                title: 'Активист',
+                desc: 'Найти 10 продуктов',
+                unlocked: stats.totalSearches >= 10,
+            },
+            {
+                icon: '👨🍳',
+                title: 'Мастер кухни',
+                desc: 'Создать 5 блюд',
+                unlocked: stats.totalDishes >= 5,
+            },
+            {
+                icon: '🔥',
+                title: 'Стрик мастер',
+                desc: 'Активность 7 дней подряд',
+                unlocked: stats.streakDays >= 7,
+            },
+        ];
+
+        const achievementsGrid = document.getElementById('achievementsGrid');
+        achievementsGrid.innerHTML = '';
+
+        achievements.forEach((achievement) => {
+            const badge = document.createElement('div');
+            badge.className = `achievement-badge ${
+                achievement.unlocked ? 'unlocked' : ''
+            }`;
+            badge.innerHTML = `
+                <div class="achievement-icon">${achievement.icon}</div>
+                <div class="achievement-title">${achievement.title}</div>
+                <div class="achievement-desc">${achievement.desc}</div>
+            `;
+            achievementsGrid.appendChild(badge);
+        });
+    }
 
     const createDishBtn = document.getElementById('createDishBtn');
     const dishModal = document.getElementById('dishModal');

@@ -15,5 +15,6 @@ apiRouter.delete('/api/deleteDish', apiController.deleteDish);
 apiRouter.post('/api/createMeal', apiController.createMeal);
 apiRouter.post('/api/updateAbout', apiController.updateAbout);
 apiRouter.get('/api/getUserProfile', apiController.getUserProfile);
+apiRouter.get('/api/activity', apiController.getActivityData);
 
 export default apiRouter;

@@ -9,6 +9,7 @@
             rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         />
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
         <div class="view-switcher" id="switchBtnSpace">
@@ -46,6 +47,9 @@
                         Избранное
                     </button>
                     <button id="navDiet" class="navbar-link">Моя диета</button>
+                    <button id="navActivity" class="navbar-link">
+                        Активность
+                    </button>
                     <button id="navLogout" class="navbar-link">Выйти</button>
                 </div>
             </div>
@@ -356,14 +360,6 @@
                             Ваши любимые продукты для быстрого доступа
                         </p>
                     </div>
-                    <div class="favorites-stats">
-                        <div class="stat-card">
-                            <span class="stat-number" id="favoritesCount"
-                                >0</span
-                            >
-                            <span class="stat-label">в избранном</span>
-                        </div>
-                    </div>
                 </header>
 
                 <div class="favorites-content">
@@ -388,6 +384,81 @@
                         >
                             Найти продукты
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Page -->
+        <div
+            class="container activity-page"
+            id="activityPage"
+            style="display: none"
+        >
+            <div class="activity-container">
+                <header class="activity-header">
+                    <h1>📊 Активность</h1>
+                    <p class="activity-subtitle">
+                        Отслеживайте свой прогресс в питании
+                    </p>
+                </header>
+                <div class="activity-content">
+                    <!-- Stats Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">🔍</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="totalSearches">
+                                    0
+                                </div>
+                                <div class="stat-label">Продуктов найдено</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🍽️</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="totalDishes">
+                                    0
+                                </div>
+                                <div class="stat-label">Блюд создано</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">❤️</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="totalFavorites">
+                                    0
+                                </div>
+                                <div class="stat-label">В избранном</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="streakDays">0</div>
+                                <div class="stat-label">Дней подряд</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <h3>📈 Поиск продуктов</h3>
+                            <canvas id="searchChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>🍳 Создание блюд</h3>
+                            <canvas id="dishChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Achievements -->
+                    <div class="achievements-section">
+                        <h3>🏆 Достижения</h3>
+                        <div class="achievements-grid" id="achievementsGrid">
+                            <!-- Achievements will be populated by JavaScript -->
+                        </div>
                     </div>
                 </div>
             </div>
