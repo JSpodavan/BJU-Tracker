@@ -227,50 +227,78 @@ class apiController {
     }
     async loadDishList(req, res) {
         const id = req.params.id;
-        const poolResponse = await pool.query(
+        const { week } = req.query;
+
+        // Load all dishes for the user
+        const dishesResponse = await pool.query(
             'SELECT * FROM dishes WHERE user_id=$1',
             [id]
         );
-        const res1 = poolResponse.rows;
+        const dishes = dishesResponse.rows;
 
-        for (let i = 0; i < res1.length; i++) {
-            let calories = 0;
-            let protein = 0;
-            let fat = 0;
-            let carbs = 0;
+        // Calculate nutrition for each dish
+        for (let i = 0; i < dishes.length; i++) {
+            let calories = 0,
+                protein = 0,
+                fat = 0,
+                carbs = 0;
 
-            if (res1[i].products && res1[i].products.length > 0) {
-                const products_to_search = res1[i].products
+            if (dishes[i].products && dishes[i].products.length > 0) {
+                const products_to_search = dishes[i].products
                     .replace('{', '')
                     .replace('}', '')
                     .replaceAll('"', '')
                     .split(',');
 
                 for (const product of products_to_search) {
-                    const poolResponse2 = await pool.query(
+                    const productResponse = await pool.query(
                         'SELECT calories, protein, fat, carbs FROM products WHERE name=$1',
                         [product]
                     );
-                    if (poolResponse2.rows.length > 0) {
+                    if (productResponse.rows.length > 0) {
                         calories +=
-                            parseInt(poolResponse2.rows[0].calories) || 0;
-                        protein += parseInt(poolResponse2.rows[0].protein) || 0;
-                        fat += parseInt(poolResponse2.rows[0].fat) || 0;
-                        carbs += parseInt(poolResponse2.rows[0].carbs) || 0;
+                            parseInt(productResponse.rows[0].calories) || 0;
+                        protein +=
+                            parseInt(productResponse.rows[0].protein) || 0;
+                        fat += parseInt(productResponse.rows[0].fat) || 0;
+                        carbs += parseInt(productResponse.rows[0].carbs) || 0;
                     }
                 }
             }
-
-            res1[i].calories = calories;
-            res1[i].protein = protein;
-            res1[i].fat = fat;
-            res1[i].carbs = carbs;
+            dishes[i].calories = calories;
+            dishes[i].protein = protein;
+            dishes[i].fat = fat;
+            dishes[i].carbs = carbs;
         }
 
-        res.json(res1);
+        let mealPlan = [];
+        let weeklyTotals = { calories: 0, protein: 0, fat: 0, carbs: 0 };
+        if (week) {
+            const mealResponse = await pool.query(
+                'SELECT hd.day_week, hd.meal, d.name, d.id FROM history_dishes hd JOIN dishes d ON hd.meal_id = d.id WHERE hd.user_id = $1 AND hd.week = $2',
+                [id, week]
+            );
+            mealPlan = mealResponse.rows;
+
+            for (const meal of mealPlan) {
+                const dish = dishes.find((d) => d.id == meal.id);
+                if (dish) {
+                    weeklyTotals.calories += dish.calories || 0;
+                    weeklyTotals.protein += dish.protein || 0;
+                    weeklyTotals.fat += dish.fat || 0;
+                    weeklyTotals.carbs += dish.carbs || 0;
+                }
+            }
+        }
+
+        res.json({ dishes, mealPlan, weeklyTotals });
     }
     async deleteDish(req, res) {
         const { name } = req.body;
+        const poolResponse123 = await pool.query(
+            'DELETE FROM history_dishes WHERE meal_id IN (SELECT id FROM dishes WHERE name=$1)',
+            [name]
+        );
         const poolResponse = await pool.query(
             'DELETE FROM dishes WHERE name=$1',
             [name]
@@ -278,25 +306,34 @@ class apiController {
         res.json({ message: 'Блюдо успешно удалено', status: 'Успех' });
     }
     async createMeal(req, res) {
-        const { user_id, day, meal, dish } = req.body;
-        const poolResponse0 = await pool.query(
-            'SELECT day_week, meal FROM dishes WHERE user_id=$1 AND name=$2',
-            [user_id, dish]
-        );
-        var days;
-        var meals;
-        if (poolResponse0.rows[0].day_week != null) {
-            days = poolResponse0.rows[0].day_week + ', ' + day;
-            meals = poolResponse0.rows[0].meal + ', ' + meal;
-        } else {
-            days = day;
-            meals = meal;
+        try {
+            const { user_id, day, meal, dish, week } = req.body;
+
+            // Get dish ID from dish name
+            const dishResponse = await pool.query(
+                'SELECT id FROM dishes WHERE user_id=$1 AND name=$2',
+                [user_id, dish]
+            );
+
+            if (dishResponse.rows.length === 0) {
+                return res.status(404).json({ message: 'Блюдо не найдено' });
+            }
+
+            const dishId = dishResponse.rows[0].id;
+
+            // Insert into history_dishes table
+            const poolResponse = await pool.query(
+                'INSERT INTO history_dishes (user_id, meal_id, day_week, meal, week) VALUES ($1, $2, $3, $4, $5)',
+                [user_id, dishId, day, meal, week]
+            );
+
+            res.status(200).json({
+                message: 'Блюдо успешно добавлено в план питания',
+            });
+        } catch (error) {
+            console.error('Error creating meal:', error);
+            res.status(500).json({ message: 'Ошибка сервера' });
         }
-        const poolResponse = await pool.query(
-            'UPDATE dishes SET day_week =$1, meal=$2 WHERE user_id=$3 AND name=$4 RETURNING *',
-            [days, meals, user_id, dish]
-        );
-        res.status(200).json({ message: 'ВСЕ ЧЕТКО' });
     }
     async getUserProfile(req, res) {
         try {
@@ -368,12 +405,12 @@ class apiController {
                 'SELECT COUNT(*) as count FROM history WHERE user_id = $1',
                 [decoded.id]
             );
-            
+
             const totalDishes = await pool.query(
                 'SELECT COUNT(*) as count FROM dishes WHERE user_id = $1',
                 [decoded.id]
             );
-            
+
             const totalFavorites = await pool.query(
                 'SELECT COUNT(*) as count FROM favourite WHERE user_id = $1',
                 [decoded.id]
@@ -386,8 +423,7 @@ class apiController {
                     totalSearches: parseInt(totalSearches.rows[0].count) || 0,
                     totalDishes: parseInt(totalDishes.rows[0].count) || 0,
                     totalFavorites: parseInt(totalFavorites.rows[0].count) || 0,
-                    streakDays: Math.floor(Math.random() * 15) + 1
-                }
+                },
             });
         } catch (error) {
             console.log('Activity data error:', error);

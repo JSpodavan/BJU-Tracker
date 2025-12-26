@@ -87,6 +87,7 @@
                                 type="password"
                                 id="password"
                                 placeholder="Пароль"
+                                autocomplete="new-password"
                                 required
                             />
                         </div>
@@ -95,6 +96,7 @@
                                 type="password"
                                 id="confirmPassword"
                                 placeholder="Подтвердите пароль"
+                                autocomplete="new-password"
                                 required
                             />
                         </div>
@@ -136,6 +138,7 @@
                                 type="password"
                                 id="loginPassword"
                                 placeholder="Пароль"
+                                autocomplete="current-password"
                                 required
                             />
                         </div>
@@ -432,13 +435,6 @@
                                 <div class="stat-label">В избранном</div>
                             </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">📅</div>
-                            <div class="stat-info">
-                                <div class="stat-number" id="streakDays">0</div>
-                                <div class="stat-label">Дней подряд</div>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Charts -->
@@ -498,7 +494,35 @@
 
                     <!-- Weekly Diet Plan -->
                     <section class="weekly-diet">
-                        <h2>План питания на неделю</h2>
+                        <div class="weekly-diet-header">
+                            <div class="weekly-diet-title">
+                                <h2>План питания на неделю</h2>
+                                <span class="current-week" id="currentWeek"
+                                    >Текущая неделя</span
+                                >
+                            </div>
+                            <button
+                                class="calendar-btn"
+                                id="calendarBtn"
+                                title="Выбрать неделю"
+                            >
+                                <i class="fas fa-calendar-alt"></i>
+                            </button>
+                        </div>
+
+                        <!-- Week Selection Menu -->
+                        <div
+                            class="week-selector"
+                            id="weekSelector"
+                            style="display: none"
+                        >
+                            <div class="week-selector-content">
+                                <h3>Выберите неделю</h3>
+                                <div class="week-list" id="weekList">
+                                    <!-- Week options will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
                         <div class="days-grid">
                             <div class="day-block" data-day="monday">
                                 <h3>Понедельник</h3>

@@ -138,6 +138,213 @@ async function addToFavorites(ProductName) {
         console.error(error);
     }
 }
+function getCurrentWeek() {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - now.getDay() + 1);
+    return monday;
+}
+
+function formatWeekRange(startDate) {
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+    const options = { day: 'numeric', month: 'short' };
+    return `${startDate.toLocaleDateString(
+        'ru-RU',
+        options
+    )} - ${endDate.toLocaleDateString('ru-RU', options)}`;
+}
+
+let selectedWeek = getCurrentWeek();
+
+function updateWeeklyNutrition(weeklyTotals) {
+    const nutritionDisplay =
+        document.getElementById('weeklyNutrition') ||
+        createWeeklyNutritionDisplay();
+    nutritionDisplay.innerHTML = `
+        <span class="nutrition-item">${weeklyTotals.calories} ккал</span>
+        <span class="nutrition-item">${weeklyTotals.protein}г белков</span>
+        <span class="nutrition-item">${weeklyTotals.fat}г жиров</span>
+        <span class="nutrition-item">${weeklyTotals.carbs}г углеводов</span>
+    `;
+}
+
+function createWeeklyNutritionDisplay() {
+    const nutritionDisplay = document.createElement('div');
+    nutritionDisplay.id = 'weeklyNutrition';
+    nutritionDisplay.className = 'weekly-nutrition';
+    const calendarBtn = document.getElementById('calendarBtn');
+    calendarBtn.parentNode.insertBefore(nutritionDisplay, calendarBtn);
+    return nutritionDisplay;
+}
+
+async function loadMealPlanForWeek() {
+    try {
+        const response = await fetch(
+            `http://localhost:5000/api/DishList/${localStorage.getItem(
+                'user_id'
+            )}?week=${encodeURIComponent(formatWeekRange(selectedWeek))}`
+        );
+        const data = await response.json();
+
+        document.querySelectorAll('.meal-products').forEach((slot) => {
+            slot.innerHTML = '';
+        });
+
+        if (data.mealPlan && data.mealPlan.length > 0) {
+            data.mealPlan.forEach((meal) => {
+                const mealSlot = document.querySelector(
+                    `[data-day="${meal.day_week}"] [data-meal="${meal.meal}"] .meal-products`
+                );
+                if (mealSlot) {
+                    const dishElement = document.createElement('div');
+                    dishElement.className = 'meal-dish';
+                    dishElement.textContent = meal.name;
+                    mealSlot.appendChild(dishElement);
+                }
+            });
+        }
+
+        updateWeeklyNutrition(
+            data.weeklyTotals || { calories: 0, protein: 0, fat: 0, carbs: 0 }
+        );
+    } catch (error) {
+        console.error('Error loading meal plan:', error);
+    }
+}
+
+function updateWeeklyNutrition(weeklyTotals) {
+    const nutritionDisplay =
+        document.getElementById('weeklyNutrition') ||
+        createWeeklyNutritionDisplay();
+    nutritionDisplay.innerHTML = `
+        <div class="weekly-nutrition-item">
+            <span class="nutrition-label">Калории:</span>
+            <span class="nutrition-value">${weeklyTotals.calories}</span>
+        </div>
+        <div class="weekly-nutrition-item">
+            <span class="nutrition-label">Белки:</span>
+            <span class="nutrition-value">${weeklyTotals.protein}г</span>
+        </div>
+        <div class="weekly-nutrition-item">
+            <span class="nutrition-label">Жиры:</span>
+            <span class="nutrition-value">${weeklyTotals.fat}г</span>
+        </div>
+        <div class="weekly-nutrition-item">
+            <span class="nutrition-label">Углеводы:</span>
+            <span class="nutrition-value">${weeklyTotals.carbs}г</span>
+        </div>
+    `;
+}
+
+function createWeeklyNutritionDisplay() {
+    const nutritionDisplay = document.createElement('div');
+    nutritionDisplay.id = 'weeklyNutrition';
+    nutritionDisplay.className = 'weekly-nutrition';
+    const calendarBtn = document.getElementById('calendarBtn');
+    calendarBtn.parentNode.insertBefore(nutritionDisplay, calendarBtn);
+    return nutritionDisplay;
+}
+
+async function loadMealPlanForWeek() {
+    try {
+        const response = await fetch(
+            `http://localhost:5000/api/DishList/${localStorage.getItem(
+                'user_id'
+            )}?week=${encodeURIComponent(formatWeekRange(selectedWeek))}`
+        );
+        const data = await response.json();
+
+        document.querySelectorAll('.meal-products').forEach((slot) => {
+            slot.innerHTML = '';
+        });
+
+        if (data.mealPlan && data.mealPlan.length > 0) {
+            data.mealPlan.forEach((meal) => {
+                const mealSlot = document.querySelector(
+                    `[data-day="${meal.day_week}"] [data-meal="${meal.meal}"] .meal-products`
+                );
+                if (mealSlot) {
+                    const dishElement = document.createElement('div');
+                    dishElement.className = 'meal-dish';
+                    dishElement.textContent = meal.name;
+                    mealSlot.appendChild(dishElement);
+                }
+            });
+        }
+
+        updateWeeklyNutrition(
+            data.weeklyTotals || { calories: 0, protein: 0, fat: 0, carbs: 0 }
+        );
+    } catch (error) {
+        console.error('Error loading meal plan:', error);
+    }
+}
+
+function initWeekSelector() {
+    const calendarBtn = document.getElementById('calendarBtn');
+    const weekSelector = document.getElementById('weekSelector');
+    const currentWeekSpan = document.getElementById('currentWeek');
+    const weekList = document.getElementById('weekList');
+
+    if (!calendarBtn || !weekSelector || !currentWeekSpan || !weekList) return;
+
+    // Remove existing event listeners
+    calendarBtn.replaceWith(calendarBtn.cloneNode(true));
+    const newCalendarBtn = document.getElementById('calendarBtn');
+
+    function updateCurrentWeekDisplay() {
+        currentWeekSpan.textContent = formatWeekRange(selectedWeek);
+    }
+
+    function populateWeekOptions() {
+        const weeks = [];
+        const currentWeek = getCurrentWeek();
+
+        for (let i = 0; i <= 4; i++) {
+            const weekStart = new Date(currentWeek);
+            weekStart.setDate(currentWeek.getDate() + i * 7);
+            weeks.push({ startDate: weekStart, isCurrent: i === 0 });
+        }
+
+        weekList.innerHTML = '';
+        weeks.forEach((week) => {
+            const option = document.createElement('div');
+            option.className = `week-option ${week.isCurrent ? 'current' : ''}`;
+            option.innerHTML = `
+                <span class="week-dates">${formatWeekRange(
+                    week.startDate
+                )}</span>
+                <span class="week-label">${
+                    week.isCurrent ? 'Текущая неделя' : ''
+                }</span>
+            `;
+            option.addEventListener('click', async () => {
+                selectedWeek = week.startDate;
+                updateCurrentWeekDisplay();
+                weekSelector.style.display = 'none';
+                await loadMealPlanForWeek();
+            });
+            weekList.appendChild(option);
+        });
+    }
+
+    newCalendarBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        populateWeekOptions();
+        weekSelector.style.display =
+            weekSelector.style.display == 'block' ? 'none' : 'block';
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!weekSelector.contains(e.target) && e.target !== newCalendarBtn) {
+            weekSelector.style.display = 'none';
+        }
+    });
+
+    updateCurrentWeekDisplay();
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const username = document.getElementById('username');
     const email = document.getElementById('email');
@@ -357,7 +564,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('favoritesPage').style.display = 'none';
         setActiveNav('profile');
 
-        // Load and update product count for profile stats
         const response = await fetch(`${URL}/api/loadHistory`, {
             method: 'GET',
         });
@@ -785,9 +991,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('activityPage').style.display = 'none';
         document.getElementById('dietPage').style.display = 'block';
         setActiveNav('diet');
+
+        initWeekSelector();
+        initializeDragMeals();
         try {
             const response = await fetch(
-                `${URL}/api/DishList/${localStorage.getItem('user_id')}`
+                `${URL}/api/DishList/${localStorage.getItem(
+                    'user_id'
+                )}?week=${encodeURIComponent(formatWeekRange(selectedWeek))}`
             );
             const data = await response.json();
 
@@ -796,8 +1007,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.querySelectorAll('.meal-products').forEach((slot) => {
                 slot.innerHTML = '';
             });
-            if (data && data.length > 0) {
-                data.forEach((dish) => {
+            if (data.dishes && data.dishes.length > 0) {
+                data.dishes.forEach((dish) => {
                     const productsCount =
                         dish.products.length -
                         dish.products.replace(',', '').length +
@@ -852,31 +1063,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                         dishComposition.style.display = 'block';
                     });
                     dishesGrid.appendChild(dishCard);
-                    if (dish.day_week && dish.meal) {
-                        const days = dish.day_week.split(',');
-                        const meals = dish.meal.split(',');
+                });
+            }
 
-                        days.forEach((day, index) => {
-                            if (meals[index]) {
-                                const dayTrimmed = day.trim();
-                                const mealTrimmed = meals[index].trim();
-                                const mealSlot = document.querySelector(
-                                    `[data-day="${dayTrimmed}"] [data-meal="${mealTrimmed}"] .meal-products`
-                                );
-                                if (mealSlot) {
-                                    const dishElement =
-                                        document.createElement('div');
-                                    dishElement.className = 'meal-dish';
-                                    dishElement.textContent = dish.name;
-                                    mealSlot.appendChild(dishElement);
-                                }
-                            }
-                        });
+            // Populate meal slots from history_dishes
+            if (data.mealPlan && data.mealPlan.length > 0) {
+                data.mealPlan.forEach((meal) => {
+                    const mealSlot = document.querySelector(
+                        `[data-day="${meal.day_week}"] [data-meal="${meal.meal}"] .meal-products`
+                    );
+                    if (mealSlot) {
+                        const dishElement = document.createElement('div');
+                        dishElement.className = 'meal-dish';
+                        dishElement.textContent = meal.name;
+                        mealSlot.appendChild(dishElement);
                     }
                 });
-            } else {
-                console.log('нет блюд');
             }
+
+            updateWeeklyNutrition(
+                data.weeklyTotals || {
+                    calories: 0,
+                    protein: 0,
+                    fat: 0,
+                    carbs: 0,
+                }
+            );
         } catch (error) {
             console.error('Ошибка загрузки', error);
         }
@@ -1011,8 +1223,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             stats.totalDishes || 0;
         document.getElementById('totalFavorites').textContent =
             stats.totalFavorites || 0;
-        document.getElementById('streakDays').textContent =
-            stats.streakDays || 0;
     }
 
     function updateAchievements(stats) {
@@ -1046,12 +1256,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 title: 'Мастер кухни',
                 desc: 'Создать 5 блюд',
                 unlocked: stats.totalDishes >= 5,
-            },
-            {
-                icon: '🔥',
-                title: 'Стрик мастер',
-                desc: 'Активность 7 дней подряд',
-                unlocked: stats.streakDays >= 7,
             },
         ];
 
@@ -1238,12 +1442,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }),
             });
 
-            // Fetch updated dish data with nutrition values
             const response = await fetch(
                 `${URL}/api/DishList/${localStorage.getItem('user_id')}`
             );
             const dishesData = await response.json();
-            const newDish = dishesData.find((dish) => dish.name === dishName);
+            const newDish = dishesData.dishes.find(
+                (dish) => dish.name === dishName
+            );
 
             popup_space.style.display = 'block';
             popup_text.textContent = 'Блюдо успешно создано!';
@@ -1272,15 +1477,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 selectedDishName.textContent = dishName;
                 compositionProducts.innerHTML = '';
 
-                // Display products
                 productsNames.forEach((product) => {
                     const productElement = document.createElement('div');
                     productElement.className = 'composition-product';
                     productElement.textContent = product.trim();
                     compositionProducts.appendChild(productElement);
                 });
-
-                // Set actual nutrition values from server
                 if (newDish) {
                     document.getElementById('dishProtein').textContent =
                         newDish.protein + 'г';
@@ -1337,41 +1539,69 @@ document.addEventListener('DOMContentLoaded', async () => {
             popup_title.textContent = 'Письмо отправлено';
         });
 
-    const dragMeals = document.querySelectorAll('.drag-meal');
-    const dragOverlay = document.getElementById('dragOverlay');
+    function initializeDragMeals() {
+        const dragOverlay = document.getElementById('dragOverlay');
 
-    dragMeals.forEach((meal) => {
-        meal.addEventListener('click', async () => {
-            const selectedDish = dragOverlay.dataset.selectedDish;
-            if (selectedDish) {
-                const day = meal.closest('.drag-day').dataset.day;
-                const mealType = meal.dataset.meal;
-                const actualMealSlot = document.querySelector(
-                    `[data-day="${day}"] [data-meal="${mealType}"] .meal-products`
-                );
-                const dishElement = document.createElement('div');
-                dishElement.className = 'meal-dish';
-                dishElement.textContent = selectedDish;
-                actualMealSlot.appendChild(dishElement);
-                const response = await fetch(`${URL}/api/createMeal`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        user_id: localStorage.getItem('user_id'),
-                        day: day,
-                        meal: mealType,
-                        dish: selectedDish,
-                    }),
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-                dragOverlay.style.display = 'none';
-                document.getElementById('dishComposition').style.display =
-                    'none';
-                delete dragOverlay.dataset.selectedDish;
+        // Use event delegation instead of individual listeners
+        document.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('drag-meal')) {
+                const selectedDish = dragOverlay.dataset.selectedDish;
+                if (selectedDish) {
+                    const day = e.target.closest('.drag-day').dataset.day;
+                    const mealType = e.target.dataset.meal;
+                    const actualMealSlot = document.querySelector(
+                        `[data-day="${day}"] [data-meal="${mealType}"] .meal-products`
+                    );
+                    const dishElement = document.createElement('div');
+                    dishElement.className = 'meal-dish';
+                    dishElement.textContent = selectedDish;
+                    actualMealSlot.appendChild(dishElement);
+                    const response = await fetch(`${URL}/api/createMeal`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            user_id: localStorage.getItem('user_id'),
+                            day: day,
+                            meal: mealType,
+                            dish: selectedDish,
+                            week: formatWeekRange(selectedWeek),
+                        }),
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                    });
+
+                    await updateWeeklyNutritionAfterMealAdd();
+
+                    dragOverlay.style.display = 'none';
+                    document.getElementById('dishComposition').style.display =
+                        'none';
+                    delete dragOverlay.dataset.selectedDish;
+                }
             }
         });
-    });
+    }
+
+    async function updateWeeklyNutritionAfterMealAdd() {
+        try {
+            const response = await fetch(
+                `${URL}/api/DishList/${localStorage.getItem(
+                    'user_id'
+                )}?week=${encodeURIComponent(formatWeekRange(selectedWeek))}`
+            );
+            const data = await response.json();
+
+            updateWeeklyNutrition(
+                data.weeklyTotals || {
+                    calories: 0,
+                    protein: 0,
+                    fat: 0,
+                    carbs: 0,
+                }
+            );
+        } catch (error) {
+            console.error('Error updating weekly nutrition:', error);
+        }
+    }
 
     dragOverlay.addEventListener('click', (e) => {
         if (e.target === dragOverlay) {
