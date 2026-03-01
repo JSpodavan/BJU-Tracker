@@ -30,7 +30,7 @@
 
 ### 1. Клонируйте репозиторий
 ```bash
-git clone https://github.com/JSpodavan/Project1.git
+git clone https://github.com/JSpodavan/BJU-Tracker.git
 cd project
 ```
 
