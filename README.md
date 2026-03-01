@@ -131,7 +131,3 @@ http://localhost:5000
 - `DELETE /api/deleteDish` — Удалить блюдо
 - `POST /api/createMeal` — Добавить блюдо в план питания
 - `GET /api/activity` — Получить статистику активности
-
-## 📝 Лицензия
-
-ISC
