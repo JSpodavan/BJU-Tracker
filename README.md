@@ -31,7 +31,7 @@
 ### 1. Клонируйте репозиторий
 ```bash
 git clone https://github.com/JSpodavan/BJU-Tracker.git
-cd project
+cd BJU-Tracker
 ```
 
 ### 2. Установите зависимости
