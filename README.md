@@ -47,30 +47,7 @@ npm install
 cp .env.example .env
 ```
 
-Отредактируйте `.env`:
-```env
-# Server
-PORT=5000
-
-# PostgreSQL
-PG_HOST=localhost
-PG_PORT=5432
-PG_USER=postgres
-PG_PASSWORD=ваш_пароль
-PG_DATABASE=название_бд
-
-# JWT
-JWT_SECRET=любой_секретный_ключ
-
-# Edamam API (https://developer.edamam.com/)
-EDAMAM_ID=ваш_app_id
-EDAMAM_KEY=ваш_app_key
-
-# Email для восстановления пароля
-EMAIL=ваш_email@gmail.com
-EMAIL_PASS=пароль_приложения_google
-```
-
+Отредактируйте `.env`
 ### 4. Настройте базу данных
 
 Создайте пустую базу данных в PostgreSQL:
