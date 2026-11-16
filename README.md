@@ -46,8 +46,6 @@ npm install
 ```bash
 cp .env.example .env
 ```
-
-Отредактируйте `.env`
 ### 4. Настройте базу данных
 
 Создайте пустую базу данных в PostgreSQL:
