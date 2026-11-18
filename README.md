@@ -52,27 +52,39 @@ npm install
 **Вариант А — через командную строку (psql):**
 
 ```bash
-# 1. Создайте пустую базу данных
-psql -U postgres -c "CREATE DATABASE bju_tracker;"
-
-# 2. Создайте таблицы из файла схемы
-psql -U postgres -d bju_tracker -f database.sql
+cp .env.example .env
 ```
 
-**Вариант Б — через pgAdmin:**
+Отредактируйте `.env`:
+```env
+# Server
+PORT=5000
 
-1. Нажмите правой кнопкой на **Databases → Create → Database…**, введите имя (например, `bju_tracker`) и сохраните.
-2. Выберите созданную базу, откройте **Tools → Query Tool**.
-3. Откройте файл `database.sql` (или вставьте его содержимое) и выполните (F5).
+# PostgreSQL
+PG_HOST=localhost
+PG_PORT=5432
+PG_USER=postgres
+PG_PASSWORD=ваш_пароль
+PG_DATABASE=название_бд
 
-Должно быть 6 таблиц: `users`, `products`, `history`, `favourite`, `dishes`, `history_dishes`.
+# JWT
+JWT_SECRET=любой_секретный_ключ
 
-### 4. Настройте переменные окружения
+# Edamam API (https://developer.edamam.com/)
+EDAMAM_ID=ваш_app_id
+EDAMAM_KEY=ваш_app_key
 
-Скопируйте файл `.env.example` в `.env` и заполните свои данные
+# Email для восстановления пароля
+EMAIL=ваш_email@gmail.com
+EMAIL_PASS=пароль_приложения_google
+```
 
-> `EMAIL_PASS` — это не обычный пароль от Gmail, а **пароль приложения**:
-> Google-аккаунт → Безопасность → Двухэтапная аутентификация (должна быть включена) → Пароли приложений.
+### 4. Настройте базу данных
+
+Создайте пустую базу данных в PostgreSQL:
+```sql
+CREATE DATABASE your_database_name;
+```
 
 ### 5. Запустите сервер
 ```bash
