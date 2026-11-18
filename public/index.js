@@ -1,7 +1,22 @@
+// Экранирование для вставки в innerHTML
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+// Безопасный строковый аргумент для onclick="fn(...)": названия с кавычками
+// (например, chef's salad или «Мамин "борщ"») раньше ломали обработчик
+function jsArg(value) {
+    return escapeHtml(JSON.stringify(String(value ?? '')));
+}
+
 async function removeFromFavorites(productName) {
     try {
         const response = await fetch(
-            `http://localhost:5000/api/deleteFavourite`,
+            `/api/deleteFavourite`,
             {
                 method: 'DELETE',
                 headers: {
@@ -35,15 +50,12 @@ async function removeFromFavorites(productName) {
                         card.remove();
 
                         let remainingCards = '';
-                        let index = 0;
-                        let cnt = 0;
-                        for (let product of products) {
-                            if (product.name == productName) {
-                                index = cnt;
-                            }
-                            cnt++;
-                        }
-                        products.splice(index, 1);
+                        // Раньше при отсутствии продукта удалялся первый
+                        // элемент списка (index по умолчанию был 0)
+                        const index = products.findIndex(
+                            (product) => product.name == productName
+                        );
+                        if (index !== -1) products.splice(index, 1);
                         console.log(products);
                         localStorage.setItem(
                             'products',
@@ -88,13 +100,17 @@ async function removeFromFavorites(productName) {
 }
 async function deleteDish(dishName) {
     const dishCards = document.querySelectorAll('.dish-card');
-    await fetch('http://localhost:5000/api/deleteDish', {
+    const response = await fetch('/api/deleteDish', {
         method: 'DELETE',
         body: JSON.stringify({ name: dishName }),
         headers: {
             'Content-Type': 'application/json',
         },
     });
+    if (!response.ok) {
+        alert('Не удалось удалить блюдо');
+        return;
+    }
 
     // Remove dish card from dishes grid
     dishCards.forEach((card) => {
@@ -110,11 +126,14 @@ async function deleteDish(dishName) {
             mealDish.remove();
         }
     });
+
+    // Пересчитываем итоги недели — удалённое блюдо больше не учитывается
+    await loadMealPlanForWeek();
 }
 
 async function addToFavorites(ProductName) {
     try {
-        const response = await fetch('http://localhost:5000/api/favourite', {
+        const response = await fetch('/api/favourite', {
             method: 'POST',
             body: JSON.stringify({
                 name: ProductName,
@@ -141,7 +160,9 @@ async function addToFavorites(ProductName) {
 function getCurrentWeek() {
     const now = new Date();
     const monday = new Date(now);
-    monday.setDate(now.getDate() - now.getDay() + 1);
+    // getDay(): 0 — воскресенье. Раньше в воскресенье бралась уже следующая
+    // неделя (now - 0 + 1 = завтрашний понедельник)
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
     return monday;
 }
 
@@ -181,7 +202,7 @@ function createWeeklyNutritionDisplay() {
 async function loadMealPlanForWeek() {
     try {
         const response = await fetch(
-            `http://localhost:5000/api/DishList/${localStorage.getItem(
+            `/api/DishList/${localStorage.getItem(
                 'user_id'
             )}?week=${encodeURIComponent(formatWeekRange(selectedWeek))}`
         );
@@ -249,7 +270,7 @@ function createWeeklyNutritionDisplay() {
 async function loadMealPlanForWeek() {
     try {
         const response = await fetch(
-            `http://localhost:5000/api/DishList/${localStorage.getItem(
+            `/api/DishList/${localStorage.getItem(
                 'user_id'
             )}?week=${encodeURIComponent(formatWeekRange(selectedWeek))}`
         );
@@ -359,7 +380,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const popup_text = document.getElementById('popup-text');
     const popup_title = document.getElementById('popup_title');
     const popup_Btn = document.getElementById('popup-closeBtn');
-    const URL = 'http://localhost:5000';
+    const URL = ''; // относительные адреса — работает на любом порту/хосте
     const profilePage = document.getElementById('profilePage');
     const loginBtn = document.getElementById('loginBtn');
     const loginEmail = document.getElementById('loginEmail');
@@ -454,12 +475,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             profileUsername.textContent = data.user.name;
             profileEmail.textContent = data.user.email;
             localStorage.setItem('user_id', data.user.id);
-            const historyResponse = await fetch(`${URL}/api/loadHistory`, {
-                method: 'GET',
-            });
-            const historyData = await historyResponse.json();
+            await loadProductCount();
+        }
+    }
+    // «Продуктов найдено» — общее число найденных продуктов. Раньше бралась
+    // длина истории, которая ограничена 6 записями (и счётчик застревал)
+    async function loadProductCount() {
+        try {
+            const response = await fetch(`${URL}/api/activity`);
+            if (!response.ok) return;
+            const data = await response.json();
             document.getElementById('profileProductCount').textContent =
-                historyData.length;
+                data.stats?.totalSearches || 0;
+        } catch (error) {
+            console.error(error);
         }
     }
     await checkAuth();
@@ -473,6 +502,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     registerBtn.addEventListener('click', async (e) => {
         e.preventDefault();
+        // Требования к паролю — такие же, как на сервере и при сбросе пароля
+        const passwordErrors = [];
+        if (password.value.length < 8)
+            passwordErrors.push('Пароль должен быть не короче 8 символов');
+        if (!/\d/.test(password.value))
+            passwordErrors.push('Пароль должен содержать цифру');
+        if (!/[!@#$%^&*]/.test(password.value))
+            passwordErrors.push(
+                'Пароль должен содержать специальный символ (!@#$%^&*)'
+            );
+        if (passwordErrors.length) {
+            alert(passwordErrors.join('\n'));
+            return;
+        }
         if (password.value == confirmPassword.value) {
             try {
                 const person = {
@@ -530,12 +573,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (response.ok) {
                 popup_space.style.display = 'block';
                 localStorage.setItem('user_id', data.id);
-                const historyResponse = await fetch(`${URL}/api/loadHistory`, {
-                    method: 'GET',
-                });
-                const historyData = await historyResponse.json();
-                document.getElementById('profileProductCount').textContent =
-                    historyData.length;
+                await loadProductCount();
+                // «О себе» грузится при открытии страницы, когда пользователь
+                // ещё не вошёл — подгружаем после входа
+                if (typeof loadAboutInfo === 'function') loadAboutInfo();
                 popup_title.textContent = 'Вход в аккаунт';
                 popup_text.textContent = 'Вы успешно вошли в аккаунт';
                 setTimeout(() => {
@@ -549,8 +590,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }, 2000);
             } else {
                 popup_space.style.display = 'block';
-                popup_title.textContent = data.status;
-                popup_text.textContent = data.message;
+                popup_title.textContent = data.status || 'Ошибка';
+                // Ошибки валидации (пустые поля) приходят в data.errors —
+                // раньше в окне показывалось «undefined»
+                popup_text.textContent = data.errors
+                    ? data.errors.map((err) => err.msg).join('\n')
+                    : data.message;
             }
         } catch (error) {
             console.error('Ошибка', error);
@@ -564,32 +609,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('favoritesPage').style.display = 'none';
         setActiveNav('profile');
 
-        const response = await fetch(`${URL}/api/loadHistory`, {
-            method: 'GET',
-        });
-        const data = await response.json();
-        document.getElementById('profileProductCount').textContent =
-            data.length;
+        await loadProductCount();
     });
-    navProducts.addEventListener('click', async () => {
-        profilePage.style.display = 'none';
-        document.getElementById('dietPage').style.display = 'none';
-        document.getElementById('activityPage').style.display = 'none';
-        productsPage.style.display = 'block';
-        document.getElementById('favoritesPage').style.display = 'none';
-        setActiveNav('products');
-        const response = await fetch(`${URL}/api/loadHistory`, {
-            method: 'GET',
-        });
-        const data = await response.json();
-        historyContainer.innerHTML = '';
-
-        data.forEach((product) => {
-            const productCard = document.createElement('div');
-            productCard.className = 'history-product-card';
-            productCard.innerHTML = `
-                <h3>${product.name}</h3>
-                <span class="category">${product.category}</span>
+    function createHistoryCard(product) {
+        const productCard = document.createElement('div');
+        productCard.className = 'history-product-card';
+        productCard.innerHTML = `
+                <h3>${escapeHtml(product.name)}</h3>
+                <span class="category">${escapeHtml(product.category)}</span>
                 <div class="nutrition-facts">
                     <div class="nutrition-item1">
                         <span class="label">Белки</span>
@@ -609,11 +636,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
                 <div class="calories-badge">${product.calories} калорий</div>
-                <button class="history-favorite-btn" onclick="addToFavorites('${product.name}')" title="Добавить в избранное">
+                <button class="history-favorite-btn" onclick="addToFavorites(${jsArg(product.name)})" title="Добавить в избранное">
                     <i class="fa fa-star"></i>
                 </button>
             `;
-            historyContainer.appendChild(productCard);
+        return productCard;
+    }
+    navProducts.addEventListener('click', async () => {
+        profilePage.style.display = 'none';
+        document.getElementById('dietPage').style.display = 'none';
+        document.getElementById('activityPage').style.display = 'none';
+        productsPage.style.display = 'block';
+        document.getElementById('favoritesPage').style.display = 'none';
+        setActiveNav('products');
+        const response = await fetch(`${URL}/api/loadHistory`, {
+            method: 'GET',
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        historyContainer.innerHTML = '';
+
+        data.forEach((product) => {
+            historyContainer.appendChild(createHistoryCard(product));
         });
     });
     navLogout.addEventListener('click', () => {
@@ -633,12 +677,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             location.reload();
         }, 2500);
     });
-    function updateProductCount() {
-        const count = document.querySelectorAll('.history-product-card').length;
-        document.getElementById('profileProductCount').textContent = count;
-    }
-    const observer = new MutationObserver(updateProductCount);
-    observer.observe(historyContainer, { childList: true });
     function showProductModal(productData) {
         modalProductName.textContent = productData.name;
         modalProductCategory.textContent = productData.category;
@@ -669,8 +707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             hideProductModal();
         }
         if (e.key === 'Escape' && dishModal.style.display === 'flex') {
-            dishModal.style.display = 'none';
-            dishNameInput.value = '';
+            closeDishModal();
         }
         if (
             e.key === 'Escape' &&
@@ -682,21 +719,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     searchBtn.addEventListener('click', async (e) => {
         e.preventDefault();
-        document.getElementById('searchLoading').style.display = 'flex';
         productStatusMessage.textContent = '';
         productStatusMessage.className = 'product-status-message';
-        let text = '';
+        const query = productSearchSpace.value.trim();
+        if (!query) {
+            productStatusMessage.textContent = 'Введите название продукта';
+            productStatusMessage.className = 'product-status-message error';
+            return;
+        }
+        document.getElementById('searchLoading').style.display = 'flex';
+        let text = query;
         try {
-            if (/^[а-яёА-ЯЁ\s]+$/.test(productSearchSpace.value)) {
+            if (/^[а-яёА-ЯЁ\s]+$/.test(query)) {
                 const responseTranslate = await fetch(
                     `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-                        productSearchSpace.value
+                        query
                     )}&langpair=ru|en&de=azdima45.azer@email.com`
                 );
                 let Translate = await responseTranslate.json();
-                text = Translate.responseData.translatedText;
-            } else {
-                text = productSearchSpace.value;
+                text = Translate.responseData.translatedText || query;
             }
         } catch (error) {
             console.log(error);
@@ -712,43 +753,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             const data = await response.json();
             document.getElementById('searchLoading').style.display = 'none';
+            if (!response.ok) {
+                throw new Error(data.error || 'Ошибка поиска');
+            }
             if (!data.alreadyExsist && data.name) {
                 showProductModal(data);
-                const productCard = document.createElement('div');
-                productCard.className = 'history-product-card';
+                const productCard = createHistoryCard(data);
                 productCard.style.animation = 'fadeInUp 0.5s';
-                productCard.innerHTML = `
-                    <h3>${data.name}</h3>
-                    <span class="category">${data.category}</span>
-                    <div class="nutrition-facts">
-                        <div class="nutrition-item1">
-                            <span class="label">Белки</span>
-                            <span class="value">${data.protein}g</span>
-                        </div>
-                        <div class="nutrition-item1">
-                            <span class="label">Жиры</span>
-                            <span class="value">${data.fat}g</span>
-                        </div>
-                        <div class="nutrition-item1">
-                            <span class="label">Углеводы</span>
-                            <span class="value">${data.carbs}g</span>
-                        </div>
-                        <div class="nutrition-item1">
-                            <span class="label">На 100г</span>
-                            <span class="value">${data.calories} ккал</span>
-                        </div>
-                    </div>
-                    <div class="calories-badge">${data.calories} калорий</div>
-                    <button class="history-favorite-btn" onclick="addToFavorites('${data.name}')" title="Добавить в избранное">
-                        <i class="fa fa-star"></i>
-                    </button>
-                `;
-                historyContainer.appendChild(productCard);
+                // История отсортирована от новых к старым и хранит 6 записей
+                historyContainer.prepend(productCard);
+                while (historyContainer.children.length > 6) {
+                    historyContainer.lastElementChild.remove();
+                }
 
                 productStatusMessage.textContent = 'Продукт найден!';
                 productStatusMessage.className =
                     'product-status-message success';
             } else if (data.alreadyExsist) {
+                // Продукт уже искали — всё равно показываем его данные
+                if (data.name) showProductModal(data);
                 productStatusMessage.textContent =
                     'Вы уже добавили этот продукт';
                 productStatusMessage.className = 'product-status-message';
@@ -816,7 +839,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const favoriteCard = document.createElement('div');
                 favoriteCard.className = 'favorite-product-card';
                 favoriteCard.innerHTML = `
-                    <h3>${product.name}</h3>
+                    <h3>${escapeHtml(product.name)}</h3>
                     <span class="category">${product.category}</span>
                     <div class="favorite-nutrition-facts">
                         <div class="favorite-nutrition-item">
@@ -838,7 +861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <div class="favorite-calories-badge">${product.calories} калорий</div>
                     <div class="favorite-actions">
-                        <button class="remove-favorite-btn" onclick="removeFromFavorites('${product.name}')">
+                        <button class="remove-favorite-btn" onclick="removeFromFavorites(${jsArg(product.name)})">
                             Удалить из избранного
                         </button>
                     </div>
@@ -856,12 +879,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 'Content-Type': 'application/json',
             },
         });
-        const popup_space = document.getElementById('popup-space');
-        const popup_text = document.getElementById('popup-text');
-        const popup_title = document.getElementById('popup_title');
+        const data = await response.json().catch(() => ({}));
         popup_space.style.display = 'block';
-        popup_text.textContent = `Письмо со сменой пароля отправлено на почту ${profileEmail.textContent}`;
-        popup_title.textContent = 'Письмо отправлено';
+        popup_title.textContent = response.ok
+            ? 'Письмо отправлено'
+            : 'Произошла ошибка';
+        popup_text.textContent =
+            data.message ||
+            (response.ok ? 'Письмо отправлено' : 'Не удалось отправить письмо');
     });
     popup_closeBtn.addEventListener('click', async (e) => {
         const popup_space = document.getElementById('popup-space');
@@ -888,7 +913,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 card.className = 'food-card-list';
                 card.innerHTML = `
                 <div class="food-card-list-header">
-                    <h3>${product.name}</h3>
+                    <h3>${escapeHtml(product.name)}</h3>
                     ${
                         product.category
                             ? `<span class="food-category">${product.category}</span>`
@@ -922,9 +947,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
                 <div class="food-card-list-footer">
-                    <button class="remove-btn-list" onclick="removeFromFavorites('${
-                        product.name
-                    }')">
+                    <button class="remove-btn-list" onclick="removeFromFavorites(${jsArg(product.name)})">
                         <i class="fas fa-trash-alt"></i> Удалить
                     </button>
                 </div>
@@ -953,7 +976,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const favoriteCard = document.createElement('div');
                 favoriteCard.className = 'favorite-product-card';
                 favoriteCard.innerHTML = `
-                    <h3>${product.name}</h3>
+                    <h3>${escapeHtml(product.name)}</h3>
                     <span class="category">${product.category}</span>
                     <div class="favorite-nutrition-facts">
                         <div class="favorite-nutrition-item">
@@ -975,7 +998,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <div class="favorite-calories-badge">${product.calories} калорий</div>
                     <div class="favorite-actions">
-                        <button class="remove-favorite-btn" onclick="removeFromFavorites('${product.name}')">
+                        <button class="remove-favorite-btn" onclick="removeFromFavorites(${jsArg(product.name)})">
                             Удалить из избранного
                         </button>
                     </div>
@@ -1009,15 +1032,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
             if (data.dishes && data.dishes.length > 0) {
                 data.dishes.forEach((dish) => {
-                    const productsCount =
-                        dish.products.length -
-                        dish.products.replace(',', '').length +
-                        1;
+                    // Раньше считалось через replace(',') — заменялась только
+                    // первая запятая, и при 3+ продуктах всегда выходило «2»
+                    const productsList = dish.productsList || [];
+                    const productsCount = productsList.length;
                     const dishCard = document.createElement('div');
                     dishCard.className = 'dish-card';
                     dishCard.innerHTML = `
-                        <button class="dish-delete-btn" onclick="event.stopPropagation(); deleteDish('${dish.name}')">×</button>
-                        <h4>${dish.name}</h4>
+                        <button class="dish-delete-btn" onclick="event.stopPropagation(); deleteDish(${jsArg(dish.name)})">×</button>
+                        <h4>${escapeHtml(dish.name)}</h4>
                         <div class="dish-products-count">${productsCount} продуктов</div>
                     `;
                     dishCard.addEventListener('click', () => {
@@ -1035,12 +1058,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         selectedDishName.textContent = dish.name;
                         compositionProducts.innerHTML = '';
 
-                        if (dish.products) {
-                            const products = dish.products
-                                .replace('{', '')
-                                .replace('}', '')
-                                .replaceAll('"', '')
-                                .split(',');
+                        {
+                            const products = productsList;
                             document.getElementById('dishProtein').textContent =
                                 dish.protein + 'г';
                             document.getElementById('dishFat').textContent =
@@ -1135,7 +1154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const labels =
             searchData.length > 0
                 ? searchData.map((item) =>
-                      new Date(item.date).toLocaleDateString('ru-RU')
+                      String(item.date).slice(0, 10).split('-').reverse().join('.')
                   )
                 : ['Нет данных'];
         const counts =
@@ -1180,7 +1199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const labels =
             dishData.length > 0
                 ? dishData.map((item) =>
-                      new Date(item.date).toLocaleDateString('ru-RU')
+                      String(item.date).slice(0, 10).split('-').reverse().join('.')
                   )
                 : ['Нет данных'];
         const counts =
@@ -1296,18 +1315,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         dishNameInput.focus();
     });
 
-    cancelDishBtn.addEventListener('click', () => {
+    // Закрытие окна создания блюда любым способом очищает выбранные
+    // продукты (раньше они оставались и попадали в следующее блюдо)
+    function closeDishModal() {
         dishModal.style.display = 'none';
         dishNameInput.value = '';
         const dishProductsList = document.getElementById('dishProductsList');
         const productItems = dishProductsList.querySelectorAll('.product-item');
         productItems.forEach((item) => item.remove());
-    });
+    }
+
+    cancelDishBtn.addEventListener('click', closeDishModal);
 
     dishModal.addEventListener('click', (e) => {
         if (e.target === dishModal) {
-            dishModal.style.display = 'none';
-            dishNameInput.value = '';
+            closeDishModal();
         }
     });
 
@@ -1331,7 +1353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     productCard.innerHTML = `
                         <input type="checkbox" class="selectable-product-checkbox">
                         <div class="selectable-product-info">
-                            <div class="selectable-product-name">${product.name}</div>
+                            <div class="selectable-product-name">${escapeHtml(product.name)}</div>
                             <div class="selectable-product-nutrition">
                                 <span>${product.calories} ккал</span>
                                 <span>Б ${product.protein}г</span>
@@ -1379,10 +1401,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         'addSelectedProductsBtn'
     );
 
-    dishModalClose.addEventListener('click', () => {
-        dishModal.style.display = 'none';
-        dishNameInput.value = '';
-    });
+    dishModalClose.addEventListener('click', closeDishModal);
 
     addSelectedProductsBtn.addEventListener('click', () => {
         const selectedProducts = document.querySelectorAll(
@@ -1402,7 +1421,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="product-image-placeholder">
                     <span>🍽️</span>
                 </div>
-                <div class="product-name">${productName}</div>
+                <div class="product-name">${escapeHtml(productName)}</div>
             `;
 
             dishProductsList.insertBefore(
@@ -1430,17 +1449,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 );
             });
 
-            await fetch(`${URL}/api/createDish`, {
+            const createResponse = await fetch(`${URL}/api/createDish`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     name: dishName,
-                    user_id: localStorage.getItem('user_id'),
                     products: productsNames,
                 }),
             });
+            // Раньше ответ не проверялся и «Блюдо успешно создано!»
+            // показывалось даже при ошибке
+            if (!createResponse.ok) {
+                const err = await createResponse.json().catch(() => ({}));
+                popup_space.style.display = 'block';
+                popup_title.textContent = 'Произошла ошибка';
+                popup_text.textContent =
+                    err.message || 'Не удалось создать блюдо';
+                return;
+            }
 
             const response = await fetch(
                 `${URL}/api/DishList/${localStorage.getItem('user_id')}`
@@ -1457,8 +1485,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dishCard = document.createElement('div');
             dishCard.className = 'dish-card';
             dishCard.innerHTML = `
-                <button class="dish-delete-btn" onclick="event.stopPropagation(); deleteDish('${dishName}')">×</button>
-                <h4>${dishName}</h4>
+                <button class="dish-delete-btn" onclick="event.stopPropagation(); deleteDish(${jsArg(dishName)})">×</button>
+                <h4>${escapeHtml(dishName)}</h4>
                 <div class="dish-products-count">${productsCount} продуктов</div>
             `;
 
@@ -1521,25 +1549,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         .getElementById('sendResetBtn')
         .addEventListener('click', async (e) => {
             e.preventDefault();
+            const forgotEmail = document.getElementById('forgotEmail').value.trim();
+            if (!forgotEmail) {
+                alert('Введите email');
+                return;
+            }
             const response = await fetch(`${URL}/user/send-reset-email`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    email: document.getElementById('forgotEmail').value,
+                    email: forgotEmail,
                 }),
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
+            const data = await response.json().catch(() => ({}));
             document.getElementById('forgotPasswordModal').style.display =
                 'none';
             popup_space.style.display = 'block';
-            popup_text.textContent = `Письмо со сменой пароля отправлено на почту ${
-                document.getElementById('forgotEmail').value
-            }`;
-            popup_title.textContent = 'Письмо отправлено';
+            popup_title.textContent = response.ok
+                ? 'Письмо отправлено'
+                : 'Произошла ошибка';
+            popup_text.textContent =
+                data.message ||
+                (response.ok
+                    ? `Письмо со сменой пароля отправлено на почту ${forgotEmail}`
+                    : 'Не удалось отправить письмо');
         });
 
+    let dragMealsInitialized = false;
     function initializeDragMeals() {
+        // Функция вызывается при каждом открытии вкладки «Питание». Раньше
+        // каждый раз добавлялся новый обработчик, и после N открытий вкладки
+        // одно нажатие добавляло блюдо в план N раз
+        if (dragMealsInitialized) return;
+        dragMealsInitialized = true;
         const dragOverlay = document.getElementById('dragOverlay');
 
         // Use event delegation instead of individual listeners
@@ -1556,6 +1600,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     dishElement.className = 'meal-dish';
                     dishElement.textContent = selectedDish;
                     actualMealSlot.appendChild(dishElement);
+                    // Закрываем выбор сразу, чтобы двойной клик не добавил
+                    // блюдо дважды
+                    dragOverlay.style.display = 'none';
+                    document.getElementById('dishComposition').style.display =
+                        'none';
+                    delete dragOverlay.dataset.selectedDish;
                     const response = await fetch(`${URL}/api/createMeal`, {
                         method: 'POST',
                         body: JSON.stringify({
@@ -1569,13 +1619,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                             'Content-Type': 'application/json',
                         },
                     });
+                    if (!response.ok) {
+                        dishElement.remove();
+                        alert('Не удалось добавить блюдо в план питания');
+                    }
 
                     await updateWeeklyNutritionAfterMealAdd();
-
-                    dragOverlay.style.display = 'none';
-                    document.getElementById('dishComposition').style.display =
-                        'none';
-                    delete dragOverlay.dataset.selectedDish;
                 }
             }
         });

@@ -1,59 +1,42 @@
 import pool from '../db.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { urlencoded } from 'express';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'azdima45.azer@gmail.com',
+        user: process.env.EMAIL,
         pass: process.env.EMAIL_PASS,
     },
 });
 
-class UserController {
-    async createUser(req, res) {
-        const { name, email, password } = req.body;
-        const alreadyReg = await pool.query(
-            'SELECT * FROM users WHERE email = $1',
-            [email]
-        );
-        if (alreadyReg.rows.length != 0) {
-            return res.status(400).json({
-                status: 'Ошибка ',
-                message: 'Пользователь с такой почтой уже есть',
-            });
-        }
-        const hashPassword = await bcrypt.hash(password, 7);
-        const verification_token = crypto.randomBytes(32).toString('hex');
-        const verificationTokenTime = new Date(Date.now() + 3600000);
-        const newPerson = await pool.query(
-            'INSERT INTO users(name, email, password, verification_token, verification_token_expires) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-            [
-                name,
-                email,
-                hashPassword,
-                verification_token,
-                verificationTokenTime,
-            ]
-        );
-        const verificationLink = `http://localhost:5000/user/verify-email?token=${verification_token}`;
-        const mailOptions = {
-            from: process.env.EMAIL,
-            to: email,
-            subject: 'Подтверждение почты',
-            html: `
+// Адрес сайта для ссылок в письмах (раньше был жёстко прописан порт 5000)
+const BASE_URL =
+    process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+
+// Срок жизни ссылки подтверждения почты — 1 день (как и написано в письме)
+const VERIFICATION_TTL = 24 * 60 * 60 * 1000;
+// Срок жизни ссылки сброса пароля — 1 час (как и написано в письме)
+const RESET_TTL = 60 * 60 * 1000;
+
+function verificationMail(email, token) {
+    const verificationLink = `${BASE_URL}/user/verify-email?token=${token}`;
+    return {
+        from: process.env.EMAIL,
+        to: email,
+        subject: 'Подтверждение почты',
+        html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #2c3e50;">Подтверждение почты</h2>
-                    <p>Вы зарегистрировались на почту${email}.</p>
+                    <p>Вы зарегистрировались на почту ${email}.</p>
                     <p style="margin: 20px 0;">
-                        <a href="${verificationLink}" 
-                           style="background-color: #3498db; 
-                                  color: white; 
-                                  padding: 10px 20px; 
-                                  text-decoration: none; 
+                        <a href="${verificationLink}"
+                           style="background-color: #3498db;
+                                  color: white;
+                                  padding: 10px 20px;
+                                  text-decoration: none;
                                   border-radius: 5px;
                                   display: inline-block;">
                             Подтвердить почту
@@ -65,9 +48,96 @@ class UserController {
                     </p>
                 </div>
             `,
-        };
+    };
+}
+
+function messagePage(title, text, email = '') {
+    const resendForm = email
+        ? `<form action="/user/resend-verification" method="POST">
+                <input type="hidden" name="email" value="${email}">
+                <button type="submit" class="btn">Отправить письмо повторно</button>
+           </form>`
+        : `<a class="btn" href="/">На главную</a>`;
+    return `
+            <!DOCTYPE html>
+            <html lang="ru">
+            <head>
+                <meta charset="UTF-8" />
+                <title>${title}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                    .container { max-width: 500px; margin: 0 auto; }
+                    .btn {
+                        background-color: #4CAF50;
+                        border: none;
+                        color: white;
+                        padding: 15px 32px;
+                        text-align: center;
+                        text-decoration: none;
+                        display: inline-block;
+                        font-size: 16px;
+                        margin: 20px 0;
+                        cursor: pointer;
+                        border-radius: 5px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h2>${title}</h2>
+                    <p>${text}</p>
+                    ${resendForm}
+                </div>
+            </body>
+            </html>
+            `;
+}
+
+class UserController {
+    async createUser(req, res) {
+        const { name, email, password } = req.body;
+        const alreadyReg = await pool.query(
+            'SELECT * FROM users WHERE email = $1',
+            [email]
+        );
+        if (alreadyReg.rows.length != 0 && alreadyReg.rows[0].email_verified) {
+            return res.status(400).json({
+                status: 'Ошибка ',
+                message: 'Пользователь с такой почтой уже есть',
+            });
+        }
+        const hashPassword = await bcrypt.hash(password, 7);
+        const verification_token = crypto.randomBytes(32).toString('hex');
+        const verificationTokenTime = new Date(Date.now() + VERIFICATION_TTL);
+        if (alreadyReg.rows.length != 0) {
+            // Почта зарегистрирована, но не подтверждена (например, письмо
+            // не дошло) — даём зарегистрироваться повторно и шлём новое письмо
+            await pool.query(
+                'UPDATE users SET name=$1, password=$2, verification_token=$3, verification_token_expires=$4 WHERE id=$5',
+                [
+                    name,
+                    hashPassword,
+                    verification_token,
+                    verificationTokenTime,
+                    alreadyReg.rows[0].id,
+                ]
+            );
+        } else {
+            await pool.query(
+                'INSERT INTO users(name, email, password, verification_token, verification_token_expires) VALUES ($1, $2, $3, $4, $5)',
+                [
+                    name,
+                    email,
+                    hashPassword,
+                    verification_token,
+                    verificationTokenTime,
+                ]
+            );
+        }
         try {
-            await transporter.sendMail(mailOptions);
+            await transporter.sendMail(
+                verificationMail(email, verification_token)
+            );
             res.json({
                 message: 'Письмо для подтверждения регистрации отправлено',
             });
@@ -91,7 +161,8 @@ class UserController {
         if (!person.rows[0].email_verified) {
             return res.status(401).json({
                 status: 'Ошибка',
-                message: 'Почта не подтверждена',
+                message:
+                    'Почта не подтверждена. Перейдите по ссылке из письма или зарегистрируйтесь ещё раз, чтобы получить новое письмо',
             });
         }
         const user = person.rows[0];
@@ -101,7 +172,6 @@ class UserController {
                 { name: user.name, email: user.email, id: user.id },
                 process.env.JWT_SECRET
             );
-            console.log('Токен :', token);
             res.cookie('auth_token', token, {
                 httpOnly: true,
                 secure: false,
@@ -131,30 +201,35 @@ class UserController {
     }
     async sendEmail(req, res) {
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenTime = new Date(Date.now() + 3600000);
-        let email = 0;
-        let decoded = null;
+        const resetTokenTime = new Date(Date.now() + RESET_TTL);
+        let email = req.body?.email;
 
-        if (req.body.email == undefined) {
-            const token = req.cookies.auth_token;
-            decoded = jwt.verify(token, process.env.JWT_SECRET);
-            email = decoded.email;
-        } else {
-            email = req.body.email;
-        }
-        if (email == undefined) {
-            await pool.query(
-                'UPDATE users SET reset_token=$1, reset_token_time=$2 WHERE id=$3',
-                [resetToken, resetTokenTime, decoded.id]
-            );
-        } else {
-            await pool.query(
-                'UPDATE users SET reset_token=$1, reset_token_time=$2 WHERE email=$3',
-                [resetToken, resetTokenTime, email]
-            );
+        // Смена пароля из профиля: почту берём из токена авторизации
+        if (!email) {
+            try {
+                const decoded = jwt.verify(
+                    req.cookies.auth_token,
+                    process.env.JWT_SECRET
+                );
+                email = decoded.email;
+            } catch (error) {
+                return res
+                    .status(400)
+                    .json({ message: 'Укажите email для сброса пароля' });
+            }
         }
 
-        const resetLink = `http://localhost:5000/resetPassword.html?token=${resetToken}`;
+        const updated = await pool.query(
+            'UPDATE users SET reset_token=$1, reset_token_time=$2 WHERE email=$3 RETURNING id',
+            [resetToken, resetTokenTime, email]
+        );
+        if (updated.rows.length === 0) {
+            return res
+                .status(404)
+                .json({ message: 'Пользователь с такой почтой не найден' });
+        }
+
+        const resetLink = `${BASE_URL}/resetPassword.html?token=${resetToken}`;
 
         const mailOptions = {
             from: process.env.EMAIL,
@@ -165,11 +240,11 @@ class UserController {
                     <h2 style="color: #2c3e50;">Сброс пароля</h2>
                     <p>Вы запросили сброс пароля для аккаунта ${email}.</p>
                     <p style="margin: 20px 0;">
-                        <a href="${resetLink}" 
-                           style="background-color: #3498db; 
-                                  color: white; 
-                                  padding: 10px 20px; 
-                                  text-decoration: none; 
+                        <a href="${resetLink}"
+                           style="background-color: #3498db;
+                                  color: white;
+                                  padding: 10px 20px;
+                                  text-decoration: none;
                                   border-radius: 5px;
                                   display: inline-block;">
                             Сбросить пароль
@@ -185,7 +260,7 @@ class UserController {
         try {
             await transporter.sendMail(mailOptions);
             res.json({
-                message: 'Письмо с инструкциями отправлено на ваш email',
+                message: `Письмо со сменой пароля отправлено на почту ${email}`,
             });
         } catch (error) {
             console.error(error);
@@ -194,10 +269,31 @@ class UserController {
     }
     async switchPassword(req, res) {
         const { token, password } = req.body;
+        // Те же требования, что и на странице сброса пароля
+        if (
+            typeof password !== 'string' ||
+            password.length < 8 ||
+            !/\d/.test(password) ||
+            !/[!@#$%^&*]/.test(password)
+        ) {
+            return res.status(400).json({
+                answer: 'Пароль должен быть не короче 8 символов, содержать цифру и специальный символ (!@#$%^&*)',
+            });
+        }
+        if (!token) {
+            return res
+                .status(400)
+                .json({ answer: 'Ссылка для сброса пароля недействительна' });
+        }
         const user = await pool.query(
-            'SELECT * FROM users WHERE reset_token=$1',
+            'SELECT * FROM users WHERE reset_token=$1 AND reset_token_time > NOW()',
             [token]
         );
+        if (user.rows.length === 0) {
+            return res.status(400).json({
+                answer: 'Ссылка для сброса пароля недействительна или устарела. Запросите новое письмо',
+            });
+        }
         const isMatch = await bcrypt.compare(password, user.rows[0].password);
         if (isMatch) {
             res.json({
@@ -206,67 +302,54 @@ class UserController {
         } else {
             const hashPassword = await bcrypt.hash(password, 7);
             await pool.query(
-                'UPDATE users SET password =$1, reset_token=NULL, reset_token_time=NULL WHERE email=$2',
-                [hashPassword, user.rows[0].email]
+                'UPDATE users SET password =$1, reset_token=NULL, reset_token_time=NULL WHERE id=$2',
+                [hashPassword, user.rows[0].id]
             );
             res.json({ success: true });
         }
     }
     async verify(req, res) {
         const token = req.query.token;
+        if (!token) {
+            return res.send(
+                messagePage(
+                    'Ссылка недействительна',
+                    'Ссылка для подтверждения почты неверна'
+                )
+            );
+        }
         const user = await pool.query(
-            'SELECT * FROM users WHERE verification_token=$1 AND verification_token_expires > NOW()',
+            'SELECT * FROM users WHERE verification_token=$1',
             [token]
         );
         if (!user.rows.length) {
-            const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Ссылка устарела</title>
-                <style>
-                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-                    .container { max-width: 500px; margin: 0 auto; }
-                    .btn { 
-                        background-color: #4CAF50;
-                        border: none;
-                        color: white;
-                        padding: 15px 32px;
-                        text-align: center;
-                        text-decoration: none;
-                        display: inline-block;
-                        font-size: 16px;
-                        margin: 20px 0;
-                        cursor: pointer;
-                        border-radius: 5px;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h2>Ссылка для подтверждения устарела</h2>
-                    <p>Нажмите кнопку ниже, чтобы отправить новое письмо с подтверждением</p>
-                    <form action="/user/resend-verification" method="POST">
-                        <input type="hidden" name="email" value="${
-                            user.rows[0]?.email || ''
-                        }">
-                        <button type="submit" class="btn">Отправить письмо повторно</button>
-                    </form>
-                </div>
-            </body>
-            </html>
-            `;
-            return res.send(html);
+            // Токен уже использован (почта подтверждена) или неверен
+            return res.send(
+                messagePage(
+                    'Ссылка недействительна',
+                    'Ссылка уже использована или неверна. Если почта уже подтверждена — просто войдите в аккаунт'
+                )
+            );
+        }
+        const found = user.rows[0];
+        if (new Date(found.verification_token_expires) <= new Date()) {
+            return res.send(
+                messagePage(
+                    'Ссылка для подтверждения устарела',
+                    'Нажмите кнопку ниже, чтобы отправить новое письмо с подтверждением',
+                    found.email
+                )
+            );
         }
         await pool.query(
             'UPDATE users SET email_verified = true, verification_token=null, verification_token_expires=null WHERE id = $1',
-            [user.rows[0].id]
+            [found.id]
         );
         const token1 = jwt.sign(
             {
-                name: user.rows[0].name,
-                email: user.rows[0].email,
-                id: user.rows[0].id,
+                name: found.name,
+                email: found.email,
+                id: found.id,
             },
             process.env.JWT_SECRET
         );
@@ -276,46 +359,48 @@ class UserController {
             sameSite: 'Lax',
             maxAge: 30 * 24 * 60 * 60 * 1000,
         });
-        res.send('Почта подтверждена!');
+        // Почта подтверждена и cookie выставлена — сразу открываем приложение
+        res.redirect('/');
     }
     async resend_verification(req, res) {
-        const { email } = req.body;
-        const newToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenTime = new Date(Date.now() + 3600000);
-        await pool.query(
-            'UPDATE users SET verification_token=$1, verification_token_expires=$2 WHERE email=$3',
-            [newToken, resetTokenTime, email]
+        const email = req.body?.email;
+        const user = await pool.query(
+            'SELECT id, email_verified FROM users WHERE email=$1',
+            [email]
         );
-        const resetLink = `http://localhost:5000/resetPassword.html?token=${newToken}`;
-
-        const mailOptions = {
-            from: process.env.EMAIL,
-            to: email,
-            subject: 'Сброс пароля',
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2 style="color: #2c3e50;">Сброс пароля</h2>
-                    <p>Вы запросили сброс пароля для аккаунта ${email}.</p>
-                    <p style="margin: 20px 0;">
-                        <a href="${resetLink}" 
-                           style="background-color: #3498db; 
-                                  color: white; 
-                                  padding: 10px 20px; 
-                                  text-decoration: none; 
-                                  border-radius: 5px;
-                                  display: inline-block;">
-                            Сбросить пароль
-                        </a>
-                    </p>
-                    <p><small style="color: #7f8c8d;">Ссылка действительна в течение 1 часа.</small></p>
-                    <p style="color: #7f8c8d;">
-                        Если вы не запрашивали сброс пароля, проигнорируйте это письмо.
-                    </p>
-                </div>
-            `,
-        };
-        await transporter.sendMail(mailOptions);
-        res.send('Письмо отправлено');
+        if (!user.rows.length) {
+            return res.send(
+                messagePage('Ошибка', 'Пользователь с такой почтой не найден')
+            );
+        }
+        if (user.rows[0].email_verified) {
+            return res.send(
+                messagePage(
+                    'Почта уже подтверждена',
+                    'Вы можете войти в аккаунт'
+                )
+            );
+        }
+        const newToken = crypto.randomBytes(32).toString('hex');
+        const tokenTime = new Date(Date.now() + VERIFICATION_TTL);
+        await pool.query(
+            'UPDATE users SET verification_token=$1, verification_token_expires=$2 WHERE id=$3',
+            [newToken, tokenTime, user.rows[0].id]
+        );
+        try {
+            await transporter.sendMail(verificationMail(email, newToken));
+            res.send(
+                messagePage(
+                    'Письмо отправлено',
+                    `Новое письмо с подтверждением отправлено на ${email}`
+                )
+            );
+        } catch (error) {
+            console.error(error);
+            res.status(500).send(
+                messagePage('Ошибка', 'Не удалось отправить письмо')
+            );
+        }
     }
 }
 export default new UserController();

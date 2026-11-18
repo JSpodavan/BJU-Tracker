@@ -86,7 +86,8 @@
                             <input
                                 type="password"
                                 id="password"
-                                placeholder="Пароль"
+                                placeholder="Пароль (от 8 символов, цифра и !@#$%^&*)"
+                                title="Не менее 8 символов, хотя бы одна цифра и специальный символ (!@#$%^&*)"
                                 autocomplete="new-password"
                                 required
                             />
@@ -179,9 +180,6 @@
                         </div>
                     </div>
                     <div class="profile-meta">
-                        <span id="profileRegDate" class="profile-meta-item"
-                            >Зарегистрирован: 2024</span
-                        >
                         <span id="profileStats" class="profile-meta-item"
                             >Продуктов найдено:
                             <span id="profileProductCount">0</span></span
@@ -222,19 +220,6 @@
                                     <span class="info-label">Телефон</span>
                                     <span class="info-value" id="profilePhone"
                                         >+7 (999) 123-45-67</span
-                                    >
-                                </div>
-                            </div>
-                            <div class="info-item">
-                                <div class="info-icon">
-                                    <i class="fas fa-calendar-alt"></i>
-                                </div>
-                                <div class="info-content">
-                                    <span class="info-label"
-                                        >Дата регистрации</span
-                                    >
-                                    <span class="info-value" id="profileRegDate"
-                                        >15 января 2024</span
                                     >
                                 </div>
                             </div>
@@ -283,16 +268,6 @@
                                     Отмена
                                 </button>
                             </div>
-                        </div>
-                    </section>
-                    <section class="profile-section">
-                        <h2>Интересы и достижения</h2>
-                        <div class="achievements">
-                            <div class="achievement-card">
-                                🏆 100+ продуктов найдено
-                            </div>
-                            <div class="achievement-card">🥗 ЗОЖ энтузиаст</div>
-                            <div class="achievement-card">📅 С нами с 2024</div>
                         </div>
                     </section>
                     <a href="#" class="logout-btn" id="logoutBtn"

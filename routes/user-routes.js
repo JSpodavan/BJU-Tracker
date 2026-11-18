@@ -8,9 +8,15 @@ userRouter.post(
     '/user',
     [
         check('name', 'Имя пользователя не может быть пустым').notEmpty(),
-        check('password', 'Пароль должен быть больше 4 символов').isLength({
-            min: 4,
+        // Те же требования, что и при сбросе пароля
+        check('password', 'Пароль должен быть не короче 8 символов').isLength({
+            min: 8,
         }),
+        check('password', 'Пароль должен содержать цифру').matches(/\d/),
+        check(
+            'password',
+            'Пароль должен содержать специальный символ (!@#$%^&*)'
+        ).matches(/[!@#$%^&*]/),
         check('email', 'Вы должны заполнить поле email').notEmpty(),
         check('email', 'Неверный формат email').isEmail(),
     ],
